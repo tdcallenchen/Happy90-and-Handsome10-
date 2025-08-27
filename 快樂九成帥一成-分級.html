@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<title>快樂九成帥一成team</title>
+<style>
+:root {
+  --bg: #ffe6eb;
+  --accent: #ff4d6d;
+  --dark: #333;
+  --light: #fff;
+}
+body {
+  font-family: 'Segoe UI', sans-serif;
+  font-size: 16px;
+  line-height: 1.6;
+  margin: 0;
+  padding: 20px;
+  background: linear-gradient(135deg, #ffb6c1, #ff4d6d);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+h1 { 
+  text-align: center; 
+  color: var(--light); 
+  font-size: 28px; 
+  font-weight: bold;
+  margin-bottom: 15px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+h1 .logo {
+  height: 8vw;
+  max-height: 100px;
+  min-height: 60px;
+  width: auto;
+}
+
+#controls {
+  text-align: center;
+  margin: 15px 0;
+}
+#newPlayer {
+  padding: 8px 14px;
+  width: 220px;
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+  font-size: 15px;
+}
+#newPlayerLevel {
+  padding: 8px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--accent);
+  font-size: 15px;
+}
+button {
+  font-size: 15px;
+  padding: 10px 16px;
+  margin-left: 6px;
+  border: none;
+  border-radius: 12px;
+  background-color: var(--accent);
+  color: var(--light);
+  cursor: pointer;
+  font-weight: bold;
+  transition: background-color 0.3s;
+}
+button:hover { background-color: #e60033; }
+.delete-mode-btn.active { background-color: #d32f2f !important; }
+
+.container {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 20px;
+  width: 95%;
+  max-width: 1600px;
+}
+
+/* 右側結構 */
+.right-side {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  flex: 2;
+}
+
+.courts {
+  display: flex;
+  gap: 20px;
+}
+
+.waiting {
+  display: flex;
+  gap: 20px;
+}
+
+/* 區塊樣式 */
+.area {
+  flex: 1;
+  background: var(--light);
+  border: 3px solid var(--accent);
+  border-radius: 20px;
+  padding: 10px;
+  position: relative;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  display: flex;
+  flex-direction: column;
+  height: 450px;
+  min-width: 220px;
+}
+.area h3 { 
+  text-align: center; 
+  color: var(--accent); 
+  margin: 8px 0; 
+  font-size: 18px; 
+  font-weight: bold;
+}
+.player-zone { flex-grow: 1; overflow-y: auto; }
+
+/* 休息區固定高度 */
+#bench {
+  flex: 1;
+  max-width: 260px;
+  height: 945px;
+}
+
+/* 球員卡片 */
+.player {
+  position: relative;
+  padding: 10px 12px 10px 32px;
+  margin: 8px 0;
+  background: #ffe6eb;
+  border: 2px solid var(--accent);
+  border-radius: 14px;
+  font-size: 16px;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+}
+.player .delete-x {
+  display: none;
+  position: absolute;
+  left: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 20px;
+  height: 20px;
+  border: none;
+  background: transparent;
+  color: #d32f2f;
+  font-size: 18px;
+  font-weight: bold;
+  cursor: pointer;
+  opacity: 0.8;
+  padding: 0;
+}
+.player.delete-mode .delete-x { display: block; }
+.player-name { flex-grow: 1; text-align: center; }
+.area-controls { text-align: center; margin-top: 6px; }
+
+/* 等級顏色樣式 */
+.player.level-1 { border-color: #FFD700; box-shadow: 0 0 6px #FFD700; }
+.player.level-2 { border-color: #1E90FF; box-shadow: 0 0 6px #1E90FF; }
+.player.level-3 { border-color: #32CD32; box-shadow: 0 0 6px #32CD32; }
+.player.level-4 { border-color: #8A2BE2; box-shadow: 0 0 6px #8A2BE2; }
+.player.level-5 { border-color: #808080; box-shadow: 0 0 6px #808080; }
+
+/* 等級小圓點 */
+.player::before {
+  content: "";
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  margin-right: 8px;
+  display: inline-block;
+}
+.player.level-1::before { background: #FFD700; }
+.player.level-2::before { background: #1E90FF; }
+.player.level-3::before { background: #32CD32; }
+.player.level-4::before { background: #8A2BE2; }
+.player.level-5::before { background: #808080; }
+
+/* 📱 手機自適應排版 */
+@media (max-width: 768px) {
+  h1 { font-size: 22px; }
+  .area h3 { font-size: 16px; }
+  .container {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .right-side {
+    flex-direction: column;
+  }
+  .courts, .waiting {
+    flex-direction: column;
+  }
+  #bench {
+    max-width: 100%;
+    width: 100%;
+    height: auto;
+  }
+  .area {
+    height: auto;
+  }
+  .player { font-size: 15px; padding: 8px 10px 8px 28px; }
+  button { font-size: 14px; padding: 8px 14px; }
+}
+</style>
+</head>
+<body>
+<h1>
+  <img src="logo.png" alt="logo" class="logo">
+  快樂九成帥一成team-管理系統
+</h1>
+
+<div id="controls">
+  <input type="text" id="newPlayer" placeholder="輸入球員名稱">
+  <select id="newPlayerLevel">
+    <option value="1">Level 1 - 高手</option>
+    <option value="2">Level 2 - 進階</option>
+    <option value="3" selected>Level 3 - 中等</option>
+    <option value="4">Level 4 - 初學</option>
+    <option value="5">Level 5 - 新手</option>
+  </select>
+  <button id="addPlayerBtn">新增球員</button>
+  <button id="resetBtn">重置</button>
+  <button id="deleteModeBtn" class="delete-mode-btn">刪除球員</button>
+</div>
+
+<div class="container">
+  <!-- 左邊休息區 -->
+  <div class="area" id="bench">
+    <h3>休息區</h3>
+    <div class="player-zone" id="bench-zone"></div>
+  </div>
+
+  <!-- 右側場地 + 等待區 -->
+  <div class="right-side">
+    <div class="courts">
+      <div class="area" id="court1">
+        <h3>5號場</h3>
+        <div class="player-zone" id="court1-zone"></div>
+        <div class="area-controls"><button class="endMatchBtn" data-court="court1">結束比賽</button></div>
+      </div>
+      <div class="area" id="court2">
+        <h3>6號場</h3>
+        <div class="player-zone" id="court2-zone"></div>
+        <div class="area-controls"><button class="endMatchBtn" data-court="court2">結束比賽</button></div>
+      </div>
+    </div>
+    <div class="waiting">
+      <div class="area" id="waitingA">
+        <h3>等待順位1</h3>
+        <div class="player-zone" id="waitingA-zone"></div>
+      </div>
+      <div class="area" id="waitingB">
+        <h3>等待順位2</h3>
+        <div class="player-zone" id="waitingB-zone"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+<script>
+const areaIds = ['bench-zone','court1-zone','court2-zone','waitingA-zone','waitingB-zone'];
+const maxPlayersPerArea = 4;
+let deleteMode = false;
+
+function updateDeleteUI() {
+  areaIds.forEach(id=>{
+    document.querySelectorAll(`#${id} .player`).forEach(div=>{
+      div.classList.toggle('delete-mode', deleteMode);
+      if(deleteMode && !div.querySelector('.delete-x')){
+        const btn = document.createElement('button');
+        btn.className='delete-x'; btn.textContent='✕';
+        btn.onclick = e=>{e.stopPropagation(); div.remove();};
+        div.insertBefore(btn, div.firstChild);
+      } else if(!deleteMode){
+        const btn = div.querySelector('.delete-x');
+        if(btn) btn.remove();
+      }
+    });
+  });
+}
+
+function addPlayer() {
+  const name = document.getElementById('newPlayer').value.trim();
+  const level = document.getElementById('newPlayerLevel').value;
+  if(!name) return;
+  const div = document.createElement('div');
+  div.className='player level-' + level;
+  const span = document.createElement('span');
+  span.className='player-name';
+  span.textContent=name;
+  div.appendChild(span);
+  document.getElementById('bench-zone').appendChild(div);
+  document.getElementById('newPlayer').value='';
+  updateDeleteUI();
+}
+
+function endMatch(courtId){
+  const courtZone = document.getElementById(`${courtId}-zone`);
+  const benchZone = document.getElementById('bench-zone');
+  const waitingAZone = document.getElementById('waitingA-zone');
+  const waitingBZone = document.getElementById('waitingB-zone');
+
+  // 1. 場上球員 → 休息區
+  courtZone.querySelectorAll('.player').forEach(p=>benchZone.appendChild(p));
+
+  // 2. 等待順位1 → 上場 (最多補到4人)
+  while (courtZone.querySelectorAll('.player').length < maxPlayersPerArea) {
+    let nextPlayer = waitingAZone.querySelector('.player');
+    if (!nextPlayer) break;
+    courtZone.appendChild(nextPlayer);
+  }
+
+  // 3. 等待順位2 → 等待順位1 (最多補到4人)
+  while (waitingAZone.querySelectorAll('.player').length < maxPlayersPerArea) {
+    let nextPlayer = waitingBZone.querySelector('.player');
+    if (!nextPlayer) break;
+    waitingAZone.appendChild(nextPlayer);
+  }
+
+  updateDeleteUI();
+}
+
+// 綁定事件
+document.getElementById('addPlayerBtn').addEventListener('click', addPlayer);
+
+document.getElementById('resetBtn').addEventListener('click',()=>{
+  if(confirm('確認清空所有區域?')){
+    areaIds.forEach(id=>document.getElementById(id).innerHTML='');
+  }
+});
+
+document.getElementById('deleteModeBtn').addEventListener('click',()=>{
+  deleteMode = !deleteMode;
+  document.getElementById('deleteModeBtn').classList.toggle('active', deleteMode);
+  document.getElementById('deleteModeBtn').textContent = deleteMode ? '結束刪除':'刪除球員';
+  updateDeleteUI();
+});
+
+document.querySelectorAll('.endMatchBtn').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    endMatch(btn.dataset.court);
+  });
+});
+
+// 初始化 Sortable
+areaIds.forEach(id=>{
+  Sortable.create(document.getElementById(id),{
+    group:'players',
+    animation:150,
+    onAdd: evt=>{
+      const to = evt.to;
+      if(to.querySelectorAll('.player').length>maxPlayersPerArea && to.id!=='bench-zone'){
+        evt.from.insertBefore(evt.item, evt.from.children[evt.oldIndex]);
+        alert('此區最多只能容納4人');
+      }
+    }
+  });
+});
+</script>
+</body>
+</html>

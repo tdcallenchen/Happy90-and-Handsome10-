@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<title>快樂九成帥一成team</title>
+<style>
+:root {
+  --bg: #cce7ff;
+  --accent: #e25b77;
+  --dark: #000;
+  --light: #fff;
+  --male: #8fc1ff;
+  --female: #ffb6c1;
+  --winner: #3cb371;
+}
+body {
+  font-family: 'Segoe UI', sans-serif;
+  font-size: 16px;
+  line-height: 1.6;
+  margin: 0;
+  padding: 20px;
+  background: var(--bg);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  color: var(--dark);
+}
+h1 { 
+  text-align: center; 
+  color: var(--accent); 
+  font-size: 28px; 
+  font-weight: bold;
+  margin-bottom: 15px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  cursor: pointer;
+}
+h1 .logo { height: 8vw; max-height: 100px; min-height: 60px; width: auto; }
+#controls { text-align: center; margin: 15px 0; }
+#newPlayer { padding: 8px 14px; width: 180px; border: 1px solid var(--accent); border-radius: 6px; font-size: 15px; }
+select { padding: 8px; border-radius: 6px; border: 1px solid var(--accent); font-size: 15px; }
+button { font-size: 15px; padding: 10px 16px; margin-left: 6px; border: none; border-radius: 12px; background-color: var(--accent); color: var(--light); cursor: pointer; font-weight: bold; transition: 0.3s; }
+button:hover { background-color: #d64a6a; }
+.delete-mode-btn.active { background-color: #c63f55 !important; }
+
+.container { display: flex; justify-content: center; align-items: flex-start; gap: 20px; width: 95%; max-width: 1600px; }
+.right-side { display: flex; flex-direction: column; gap: 20px; flex: 2; }
+.courts { display: flex; gap: 20px; }
+.waiting { display: flex; gap: 20px; }
+.area { flex: 1; background: var(--light); border: 2px solid var(--accent); border-radius: 20px; padding: 10px; box-shadow: 0 3px 10px rgba(0,0,0,0.1); display: flex; flex-direction: column; height: 450px; min-width: 220px; }
+.area h3 { text-align: center; color: var(--accent); margin: 8px 0; font-size: 18px; font-weight: bold; }
+.player-zone { flex-grow: 1; overflow-y: auto; }
+#bench { flex: 1; max-width: 260px; height: 945px; }
+.player { position: relative; padding: 10px 12px 10px 32px; margin: 8px 0; background: #fff4f6; border: 2px solid var(--accent); border-radius: 14px; font-size: 16px; font-weight: bold; display: flex; align-items: center; justify-content: flex-start; transition: 0.2s; cursor: pointer; }
+.player.male { background: var(--male); }
+.player.female { background: var(--female); }
+.player:hover { transform: scale(1.02); }
+.player.winner { background-color: var(--winner) !important; color: #fff; }
+.player .delete-x { display: none; position: absolute; left: 6px; top: 50%; transform: translateY(-50%); width: 20px; height: 20px; border: none; background: transparent; color: #c63f55; font-size: 18px; font-weight: bold; cursor: pointer; opacity: 0.8; padding: 0; }
+.player.delete-mode .delete-x { display: block; }
+.player-name { flex-grow: 1; text-align: center; }
+.player .win-rate { margin-left: 6px; font-size: 14px; color: var(--dark); }
+.area-controls { text-align: center; margin-top: 6px; }
+#adminControls { text-align: center; margin: 10px; display: none; }
+
+#recordModal { display:none; position:fixed; top:10%; left:50%; transform:translateX(-50%); width:800px; max-height:70%; overflow-x:auto; overflow-y:auto; background:#fff; border:2px solid var(--accent); border-radius:16px; padding:16px; box-shadow:0 5px 15px rgba(0,0,0,0.3); z-index:1000; white-space: nowrap; }
+
+#rankPanel { position:fixed; top:0; right:-360px; width:360px; height:100%; background:white; box-shadow:-3px 0 6px rgba(0,0,0,0.2); transition:right 0.3s ease; z-index:1000; padding:10px; overflow-y:auto; }
+#rankPanel.active { right:0; }
+.rank-section { margin-bottom:20px; }
+.rank-item { display:flex; justify-content:space-between; padding:4px 0; border-bottom:1px solid #eee; }
+.rank-item span { font-size:14px; }
+
+@media (max-width: 768px){
+  h1 { font-size: 22px; }
+  .area h3 { font-size: 16px; }
+  .container { flex-direction: column; align-items: stretch; }
+  .right-side { flex-direction: column; }
+  .courts, .waiting { flex-direction: column; }
+  #bench { max-width: 100%; width: 100%; height: auto; }
+  .area { height: auto; }
+  .player { font-size: 15px; padding: 8px 10px 8px 28px; }
+  button { font-size: 14px; padding: 8px 14px; }
+  #recordModal { width:90%; }
+  #rankPanel { width:90%; }
+}
+</style>
+</head>
+<body>
+
+<h1 id="title"><img src="logo.png" class="logo" alt="logo">快樂九成帥一成team</h1>
+
+<div id="controls">
+  <input type="text" id="newPlayer" placeholder="輸入球員名稱">
+  <select id="gender"><option value="M">男</option><option value="F">女</option></select>
+  <button onclick="addPlayer()">新增球員</button>
+  <button id="randomBtn">隨機分組</button>
+  <button id="resetBtn">重置今日</button>
+  <button id="deleteModeBtn" class="delete-mode-btn">刪除球員</button>
+</div>
+
+<div id="adminControls">
+  <button id="showRecordBtn">查看今日紀錄</button>
+  <button id="rankBtn">排行榜</button>
+</div>
+
+<div class="container">
+  <div class="area" id="bench"><h3>休息區</h3><div class="player-zone" id="bench-zone"></div></div>
+  <div class="right-side">
+    <div class="courts">
+      <div class="area" id="court1"><h3>5號場</h3><div class="player-zone" id="court1-zone"></div><div class="area-controls"><button onclick="endMatch('court1')">結束比賽</button></div></div>
+      <div class="area" id="court2"><h3>6號場</h3><div class="player-zone" id="court2-zone"></div><div class="area-controls"><button onclick="endMatch('court2')">結束比賽</button></div></div>
+    </div>
+    <div class="waiting">
+      <div class="area" id="waitingA"><h3>等待順位1</h3><div class="player-zone" id="waitingA-zone"></div></div>
+      <div class="area" id="waitingB"><h3>等待順位2</h3><div class="player-zone" id="waitingB-zone"></div></div>
+    </div>
+  </div>
+</div>
+
+<div id="recordModal">
+  <div id="recordContent"></div>
+  <button onclick="document.getElementById('recordModal').style.display='none'" style="margin-top:10px; display:block; margin-left:auto; margin-right:auto;">關閉</button>
+</div>
+
+<div id="rankPanel">
+  <h3>🏆 排行榜</h3>
+  <div id="maleRank" class="rank-section"><h4>男生</h4></div>
+  <div id="femaleRank" class="rank-section"><h4>女生</h4></div>
+  <button onclick="toggleRankPanel()">關閉</button>
+</div>
+
+<audio id="victorySound" src="https://actions.google.com/sounds/v1/celebration/party_winner.ogg"></audio>
+
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+<script>
+const areaIds=['bench-zone','court1-zone','court2-zone','waitingA-zone','waitingB-zone'];
+const maxPlayersPerArea=4;
+let deleteMode=false;
+let playerData={};
+let matchRecord=[];
+let matchCounter={'court1':0,'court2':0};
+
+// 載入 localStorage
+window.addEventListener('load', ()=>{
+  const saved=localStorage.getItem('playerState');
+  if(saved){
+    const state=JSON.parse(saved);
+    playerData=state.playerData||{};
+    matchRecord=state.matchRecord||[];
+    matchCounter=state.matchCounter||matchCounter;
+    areaIds.forEach(id=>{
+      const zone=document.getElementById(id); zone.innerHTML='';
+      (state[id]||[]).forEach(p=>{
+        const div=document.createElement('div');
+        div.className='player '+(p.gender==='M'?'male':'female');
+        div.dataset.name=p.name;
+        div.dataset.gender=p.gender;
+        const span=document.createElement('span');
+        span.className='player-name'; span.textContent=p.name;
+        const rate=document.createElement('span'); rate.className='win-rate';
+        rate.textContent=calcWinRate(p.name)+'%';
+        span.appendChild(rate); div.appendChild(span);
+        zone.appendChild(div);
+      });
+    });
+  }
+  updateDeleteUI();
+});
+
+// 儲存狀態
+function saveState(){
+  const state={playerData, matchRecord, matchCounter};
+  areaIds.forEach(id=>{
+    const list=[...document.getElementById(id).querySelectorAll('.player')].map(p=>({name:p.dataset.name, gender:p.dataset.gender}));
+    state[id]=list;
+  });
+  localStorage.setItem('playerState', JSON.stringify(state));
+}
+
+// 新增球員
+function addPlayer(){
+  const name=document.getElementById('newPlayer').value.trim();
+  const gender=document.getElementById('gender').value;
+  if(!name) return;
+  if(!playerData[name]) playerData[name]={score:500, gender, win:0, lose:0, todayWin:0, todayLose:0};
+  const div=document.createElement('div');
+  div.className='player '+(gender==='M'?'male':'female'); div.dataset.name=name; div.dataset.gender=gender;
+  const span=document.createElement('span'); span.className='player-name'; span.textContent=name;
+  const rate=document.createElement('span'); rate.className='win-rate'; rate.textContent='0%'; span.appendChild(rate);
+  div.appendChild(span);
+  document.getElementById('bench-zone').appendChild(div);
+  document.getElementById('newPlayer').value=''; updateDeleteUI(); saveState();
+}
+
+// 刪除模式
+function updateDeleteUI(){
+  areaIds.forEach(id=>{
+    document.querySelectorAll(`#${id} .player`).forEach(div=>{
+      div.classList.toggle('delete-mode',deleteMode);
+      if(deleteMode && !div.querySelector('.delete-x')){
+        const btn=document.createElement('button'); btn.className='delete-x'; btn.textContent='✕';
+        btn.onclick=e=>{ e.stopPropagation(); delete playerData[div.dataset.name]; div.remove(); saveState(); };
+        div.insertBefore(btn, div.firstChild);
+      } else if(!deleteMode){
+        const btn=div.querySelector('.delete-x'); if(btn) btn.remove();
+      }
+    });
+  });
+}
+document.getElementById('deleteModeBtn').addEventListener('click',()=>{
+  deleteMode=!deleteMode;
+  document.getElementById('deleteModeBtn').classList.toggle('active',deleteMode);
+  document.getElementById('deleteModeBtn').textContent=deleteMode?'結束刪除':'刪除球員';
+  updateDeleteUI();
+});
+
+// 拖曳
+areaIds.forEach(id=>{
+  Sortable.create(document.getElementById(id),{
+    group:'players', animation:150,
+    onAdd:function(evt){
+      const zoneId=evt.to.id;
+      if(zoneId!=='bench-zone' && evt.to.children.length>maxPlayersPerArea){
+        evt.from.insertBefore(evt.item, evt.from.children[evt.oldIndex]);
+      }
+      evt.item.classList.remove('winner'); updateWinRate(evt.item.dataset.name); saveState();
+    },
+    onUpdate: saveState
+  });
+});
+
+// 隨機分組
+document.getElementById('randomBtn').addEventListener('click',()=>{
+  const bench=[...document.querySelectorAll('#bench-zone .player')];
+  bench.sort((a,b)=>{
+    const diff=playerData[b.dataset.name].score-playerData[a.dataset.name].score;
+    if(diff!==0) return diff; return Math.random()-0.5;
+  });
+  const zones=[document.getElementById('court1-zone'),document.getElementById('court2-zone'),document.getElementById('waitingA-zone'),document.getElementById('waitingB-zone')];
+  zones.forEach(z=>{
+    while(z.children.length<maxPlayersPerArea && bench.length>0){
+      z.appendChild(bench.shift());
+    }
+  });
+  updateDeleteUI(); saveState();
+});
+
+// 勝率計算
+function calcWinRate(name){
+  const p=playerData[name]; if(!p) return 0;
+  const total=p.todayWin+p.todayLose;
+  return total?Math.round(p.todayWin/total*100):0;
+}
+function updateWinRate(name){
+  document.querySelectorAll('.player').forEach(p=>{
+    if(p.dataset.name===name){
+      const rate=p.querySelector('.win-rate');
+      if(rate) rate.textContent=calcWinRate(name)+'%';
+    }
+  });
+}
+
+// 結束比賽
+function endMatch(courtId){
+  const courtZone=document.getElementById(`${courtId}-zone`);
+  const bench=document.getElementById('bench-zone');
+  if(courtZone.querySelectorAll('.player').length===0) return;
+  const winners=[...courtZone.querySelectorAll('.player.winner')].map(p=>p.dataset.name);
+  if(winners.length===0){ alert('請先點選勝者'); return; }
+  document.getElementById('victorySound').play();
+  // 更新勝敗
+  courtZone.querySelectorAll('.player').forEach(p=>{
+    const name=p.dataset.name;
+    const isWinner=winners.includes(name);
+    if(isWinner){ playerData[name].win++; playerData[name].todayWin++; } else { playerData[name].lose++; playerData[name].todayLose++; }
+    updateWinRate(name); p.classList.remove('winner');
+  });
+  // 記錄
+  matchCounter[courtId]++;
+  const names=[...courtZone.querySelectorAll('.player')].map(p=>p.dataset.name);
+  const rec=`${new Date().toLocaleString()} ${courtId} 比賽${matchCounter[courtId]} 組合: ${names.join(', ')} 勝者: ${winners.join(', ')}`;
+  matchRecord.push(rec);
+  // 勝者回休息區
+  [...courtZone.querySelectorAll('.player')].forEach(p=>{ bench.appendChild(p); });
+  // 自動補位
+  const waits=['waitingA-zone','waitingB-zone'];
+  waits.forEach((id,i)=>{
+    const from=document.getElementById(id);
+    const to=i===0? courtZone : document.getElementById(waits[i-1]);
+    while(from.children.length>0 && to.children.length<maxPlayersPerArea){
+      to.appendChild(from.children[0]);
+    }
+  });
+  updateDeleteUI(); saveState();
+}
+
+// 點擊球員選勝者
+['court1-zone','court2-zone'].forEach(cid=>{
+  document.getElementById(cid).addEventListener('click',e=>{
+    if(!e.target.classList.contains('player-name')) return;
+    e.target.parentElement.classList.toggle('winner');
+  });
+});
+
+// 查看今日紀錄
+document.getElementById('showRecordBtn').addEventListener('click',()=>{
+  const modal=document.getElementById('recordModal');
+  const content=document.getElementById('recordContent');
+  content.innerHTML=matchRecord.map(r=>`<div>${r}</div>`).join('');
+  modal.style.display='block';
+});
+
+// 側拉排行榜
+function updateRankPanel(){
+  const maleRank=document.getElementById('maleRank'); const femaleRank=document.getElementById('femaleRank');
+  maleRank.innerHTML='<h4>男生</h4>'; femaleRank.innerHTML='<h4>女生</h4>';
+  Object.entries(playerData).forEach(([n,d])=>{
+    const div=document.createElement('div'); div.className='rank-item';
+    div.innerHTML=`<span>${n}</span><span>${d.win}勝/${d.lose}敗</span>`;
+    if(d.gender==='M') maleRank.appendChild(div); else femaleRank.appendChild(div);
+  });
+}
+document.getElementById('rankBtn').addEventListener('click',()=>{
+  updateRankPanel();
+  document.getElementById('rankPanel').classList.add('active');
+});
+function toggleRankPanel(){ document.getElementById('rankPanel').classList.remove('active'); }
+
+// 重置今日資料
+document.getElementById('resetBtn').addEventListener('click',()=>{
+  if(!confirm('確定要重置今日資料嗎？')) return;
+  Object.values(playerData).forEach(d=>{ d.todayWin=0; d.todayLose=0; });
+  matchRecord=[];
+  areaIds.forEach(id=>{ document.getElementById(id).innerHTML=''; });
+  saveState();
+});
+
+// 點擊標題三次顯示/隱藏管理按鈕
+let clickCount=0;
+document.getElementById('title').addEventListener('click',()=>{
+  clickCount++;
+  if(clickCount>=3){
+    const admin=document.getElementById('adminControls');
+    admin.style.display = (admin.style.display==='block') ? 'none' : 'block';
+  }
+  setTimeout(()=>{clickCount=0;},1000);
+});
+</script>
+</body>
+</html>

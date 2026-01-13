@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <title>快樂九成帥一成</title>
+
+  <style>
+    :root {
+      --milk-tea-bg: #f3e8dc;
+      --milk-tea-brown: #b08968;
+      --milk-tea-dark: #7f5539;
+      --milk-tea-light: #ede0d4;
+    }
+
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      padding: 20px;
+      background-color: var(--milk-tea-bg);
+      color: var(--milk-tea-dark);
+    }
+
+    h1 { text-align: center; }
+
+    #controls {
+      text-align: center;
+      margin: 20px 0;
+    }
+
+    #newPlayer {
+      padding: 6px 12px;
+      width: 200px;
+      border-radius: 6px;
+      border: 1px solid var(--milk-tea-brown);
+    }
+
+    button {
+      padding: 6px 12px;
+      border-radius: 6px;
+      border: none;
+      background: var(--milk-tea-brown);
+      color: #fff;
+      cursor: pointer;
+      margin-left: 6px;
+    }
+
+    button:hover {
+      background: var(--milk-tea-dark);
+    }
+
+    .delete-mode-btn.active {
+      background: #d32f2f;
+    }
+
+    .grid-container {
+      display: grid;
+      grid-template-columns: 250px 250px 250px 250px;
+      grid-template-rows: 300px 30px 300px;
+      gap: 20px;
+      justify-content: center;
+    }
+
+    .area {
+      background: var(--milk-tea-light);
+      border: 2px dashed var(--milk-tea-brown);
+      border-radius: 12px;
+      padding: 6px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .area h3 {
+      text-align: center;
+      margin: 6px 0;
+    }
+
+    .player-zone {
+      flex: 1;
+      overflow-y: auto;
+    }
+
+    .player {
+      background: #fff;
+      border: 1px solid var(--milk-tea-brown);
+      border-radius: 14px;
+      padding: 6px 10px;
+      margin: 6px 0;
+      font-weight: bold;
+      text-align: center;
+      position: relative;
+    }
+
+    .delete-x {
+      position: absolute;
+      left: 6px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      color: #d32f2f;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    footer {
+      text-align: center;
+      margin-top: 40px;
+      font-size: 14px;
+    }
+  </style>
+</head>
+
+<body>
+<h1>快樂九成帥一成</h1>
+
+<div id="controls">
+  <input id="newPlayer" placeholder="輸入隊員名稱">
+  <button onclick="addPlayer()">新增隊員</button>
+  <button id="resetBtn">重置</button>
+  <button id="deleteBtn" class="delete-mode-btn">刪除球員</button>
+</div>
+
+<div class="grid-container">
+  <div class="area" style="grid-row:1 / span 3">
+    <h3>休息區</h3>
+    <div id="bench-zone" class="player-zone"></div>
+  </div>
+
+  <div class="area">
+    <h3>場地 1</h3>
+    <div id="court1-zone" class="player-zone"></div>
+    <button onclick="endMatch('court1')">結束比賽</button>
+  </div>
+
+  <div class="area">
+    <h3>場地 2</h3>
+    <div id="court2-zone" class="player-zone"></div>
+    <button onclick="endMatch('court2')">結束比賽</button>
+  </div>
+
+  <div class="area">
+    <h3>場地 3</h3>
+    <div id="court3-zone" class="player-zone"></div>
+    <button onclick="endMatch('court3')">結束比賽</button>
+  </div>
+
+  <div></div><div></div><div></div>
+
+  <div class="area">
+    <h3>等待順位 1</h3>
+    <div id="waitingA-zone" class="player-zone"></div>
+  </div>
+
+  <div class="area">
+    <h3>等待順位 2</h3>
+    <div id="waitingB-zone" class="player-zone"></div>
+  </div>
+
+  <div class="area">
+    <h3>等待順位 3</h3>
+    <div id="waitingC-zone" class="player-zone"></div>
+  </div>
+</div>
+
+<footer>Made by WU SIR</footer>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+  import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+  import Sortable from "https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/+esm";
+
+  // 🔥 使用你提供的 Firebase
+  const firebaseConfig = {
+    apiKey: "AIzaSyCLUmagiUpLd0qRUQ-TyoFt7hwrNK7xVDY",
+    authDomain: "havix-b6fe2.firebaseapp.com",
+    databaseURL: "https://havix-b6fe2-default-rtdb.firebaseio.com",
+    projectId: "havix-b6fe2",
+    storageBucket: "havix-b6fe2.firebasestorage.app",
+    messagingSenderId: "731514229274",
+    appId: "1:731514229274:web:1f45a163f223e9fb79f7a3",
+    measurementId: "G-YHH49P39XZ"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getDatabase(app);
+
+  const areas = [
+    'bench-zone','court1-zone','court2-zone','court3-zone',
+    'waitingA-zone','waitingB-zone','waitingC-zone'
+  ];
+
+  let deleteMode = false;
+
+  function sync() {
+    areas.forEach(id => {
+      const players = [...document.getElementById(id).children].map(p => p.dataset.name);
+      set(ref(db, id), players);
+    });
+  }
+
+  areas.forEach(id => {
+    Sortable.create(document.getElementById(id), {
+      group: 'players',
+      animation: 150,
+      onEnd: sync
+    });
+
+    onValue(ref(db, id), snap => {
+      const zone = document.getElementById(id);
+      zone.innerHTML = '';
+      (snap.val() || []).forEach(name => {
+        const d = document.createElement('div');
+        d.className = 'player';
+        d.dataset.name = name;
+        d.textContent = name;
+        if (deleteMode) addX(d);
+        zone.appendChild(d);
+      });
+    });
+  });
+
+  window.addPlayer = () => {
+    const name = newPlayer.value.trim();
+    if (!name) return;
+    const d = document.createElement('div');
+    d.className = 'player';
+    d.dataset.name = name;
+    d.textContent = name;
+    bench-zone.appendChild(d);
+    newPlayer.value = '';
+    sync();
+  };
+
+  window.endMatch = (court) => {
+    const courtZone = document.getElementById(`${court}-zone`);
+    const bench = document.getElementById('bench-zone');
+    const A = document.getElementById('waitingA-zone');
+    const B = document.getElementById('waitingB-zone');
+    const C = document.getElementById('waitingC-zone');
+
+    [...courtZone.children].forEach(p => bench.appendChild(p));
+    [...A.children].forEach(p => courtZone.appendChild(p));
+    [...B.children].forEach(p => A.appendChild(p));
+    [...C.children].forEach(p => B.appendChild(p));
+    C.innerHTML = '';
+    sync();
+  };
+
+  function addX(div) {
+    const x = document.createElement('button');
+    x.textContent = '✕';
+    x.className = 'delete-x';
+    x.onclick = e => {
+      e.stopPropagation();
+      div.remove();
+      sync();
+    };
+    div.appendChild(x);
+  }
+
+  deleteBtn.onclick = () => {
+    deleteMode = !deleteMode;
+    deleteBtn.classList.toggle('active', deleteMode);
+    deleteBtn.textContent = deleteMode ? '結束刪除' : '刪除球員';
+    document.querySelectorAll('.player').forEach(p => {
+      deleteMode ? addX(p) : p.querySelector('.delete-x')?.remove();
+    });
+  };
+
+  resetBtn.onclick = () => {
+    if (!confirm('確定重置所有區域？')) return;
+    areas.forEach(id => document.getElementById(id).innerHTML = '');
+    sync();
+  };
+</script>
+</body>
+</html>

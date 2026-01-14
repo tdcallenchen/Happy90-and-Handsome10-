@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>快樂九成帥一成</title>
+    <style>
+        :root {
+            --bg: #cce7ff;
+            --accent: #e25b77;
+            --dark: #000;
+            --light: #fff;
+            --male: #8fc1ff;
+            --female: #ffb6c1;
+            --winner: #3cb371;
+            --border-radius: 15px;
+        }
+
+        body {
+            font-family: 'Segoe UI', 'Microsoft JhengHei', sans-serif;
+            margin: 0; padding: 10px; background: var(--bg); color: var(--dark); overflow-x: hidden;
+        }
+
+        h1 { text-align: center; color: var(--accent); cursor: pointer; user-select: none; margin: 10px 0; font-size: 2.2rem; }
+
+        #controls, #adminControls {
+            display: flex; justify-content: center; gap: 8px; flex-wrap: wrap; margin-bottom: 15px;
+        }
+
+        #adminControls { 
+            display: none; background: rgba(255, 255, 255, 0.7); padding: 12px; border-radius: var(--border-radius); border: 2px solid var(--accent);
+        }
+
+        input, select, button { padding: 10px; border-radius: 8px; border: 1px solid var(--accent); font-size: 16px; }
+        button { background-color: var(--accent); color: white; font-weight: bold; cursor: pointer; border: none; }
+        .btn-warning { background-color: #f57c00; }
+        .btn-info { background-color: #2196F3; }
+
+        .container {
+            display: grid; grid-template-columns: 220px 1fr; gap: 15px; height: calc(100vh - 160px); min-height: 550px;
+        }
+
+        .right-side { display: grid; grid-template-rows: 1fr 1fr; gap: 15px; overflow-x: auto; }
+        .courts, .waiting { display: grid; grid-template-columns: repeat(4, minmax(250px, 1fr)); gap: 15px; }
+
+        .area {
+            background: var(--light); border: 3px solid var(--accent); border-radius: var(--border-radius);
+            padding: 12px; display: flex; flex-direction: column; box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        }
+
+        .area h3 { text-align: center; color: var(--accent); margin: 0 0 10px 0; font-size: 1.2rem; border-bottom: 2px dashed var(--bg); }
+        .player-zone { flex-grow: 1; overflow-y: auto; min-height: 80px; }
+
+        .player {
+            position: relative; padding: 12px; margin: 8px; background: #fff4f6; border: 2px solid var(--accent);
+            border-radius: 12px; font-weight: bold; display: flex; align-items: center; justify-content: center; font-size: 16px; cursor: grab;
+        }
+        .player.male { background: var(--male); border-color: #5a91d4; }
+        .player.female { background: var(--female); border-color: #d48da3; }
+        .player.winner { background-color: var(--winner) !important; color: white; border-color: #2e8b57; }
+
+        .player-name { flex-grow: 1; text-align: center; }
+        .win-rate { font-size: 12px; margin-left: 5px; opacity: 0.8; display: block; }
+
+        .end-btn { width: 100%; margin-top: 10px; padding: 8px; font-size: 14px; background: #444; border-radius: 8px; }
+        .delete-x { display: none; position: absolute; left: 8px; color: #d32f2f; font-weight: bold; font-size: 22px; border: none; background: none; }
+        .player.delete-mode .delete-x { display: block; }
+
+        @media (max-width: 800px) {
+            .container { grid-template-columns: 140px 1fr; }
+            .courts, .waiting { grid-template-columns: repeat(4, 220px); }
+        }
+
+        .modal {
+            display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            width: 90%; max-width: 500px; background: white; border-radius: 20px; padding: 20px; box-shadow: 0 10px 40px rgba(0,0,0,0.4); z-index: 999;
+        }
+
+        .rank-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+        .rank-table th { background: #f0f0f0; padding: 8px; }
+        .rank-table td { text-align: center; padding: 8px; border-bottom: 1px solid #eee; }
+        .section-title { background: var(--accent); color: white; padding: 5px 10px; border-radius: 5px; margin: 15px 0 10px 0; }
+    </style>
+</head>
+<body>
+
+    <h1 id="mainTitle">快樂九成帥一成</h1>
+
+    <div id="controls">
+        <input type="text" id="newPlayer" placeholder="姓名" style="width: 100px;">
+        <select id="gender"><option value="M">男</option><option value="F">女</option></select>
+        <button onclick="addPlayer()">新增人員</button>
+        <button onclick="randomGroup()">隨機分組</button>
+        <button id="deleteModeBtn">刪除模式</button>
+    </div>
+
+    <div id="adminControls">
+        <button id="showRankBtn" class="btn-info">🏆 歷史排行榜</button>
+        <button id="showLogBtn" class="btn-info">📋 今日對戰紀錄</button>
+        <button class="btn-warning" onclick="resetToday()">🔄 重置今日</button>
+    </div>
+
+    <div class="container">
+        <div class="area" id="bench"><h3>休息區</h3><div class="player-zone" id="bench-zone"></div></div>
+        <div class="right-side">
+            <div class="courts">
+                <div class="area" id="court1"><h3>1 號場</h3><div class="player-zone" id="court1-zone"></div><button class="end-btn" onclick="endMatch('court1')">結束比賽</button></div>
+                <div class="area" id="court2"><h3>2 號場</h3><div class="player-zone" id="court2-zone"></div><button class="end-btn" onclick="endMatch('court2')">結束比賽</button></div>
+                <div class="area" id="court3"><h3>3 號場</h3><div class="player-zone" id="court3-zone"></div><button class="end-btn" onclick="endMatch('court3')">結束比賽</button></div>
+                <div class="area" id="court4"><h3>4 號場</h3><div class="player-zone" id="court4-zone"></div><button class="end-btn" onclick="endMatch('court4')">結束比賽</button></div>
+            </div>
+            <div class="waiting">
+                <div class="area" id="waitingA"><h3>等待 1</h3><div class="player-zone" id="waitingA-zone"></div></div>
+                <div class="area" id="waitingB"><h3>等待 2</h3><div class="player-zone" id="waitingB-zone"></div></div>
+                <div class="area" id="waitingC"><h3>等待 3</h3><div class="player-zone" id="waitingC-zone"></div></div>
+                <div class="area" id="waitingD"><h3>等待 4</h3><div class="player-zone" id="waitingD-zone"></div></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="rankModal" class="modal">
+        <h3 style="text-align:center;">🏆 歷史累計勝率榜</h3>
+        <div id="rankContent" style="max-height: 400px; overflow-y: auto;"></div>
+        <button onclick="this.parentElement.style.display='none'" style="width:100%; margin-top:15px; padding:10px;">關閉</button>
+    </div>
+
+    <div id="logModal" class="modal">
+        <h3 style="text-align:center;">📋 今日對戰回顧</h3>
+        <div id="logContent" style="max-height: 400px; overflow-y: auto; background: #f9f9f9; padding: 10px; border-radius: 10px;"></div>
+        <button onclick="this.parentElement.style.display='none'" style="width:100%; margin-top:15px; padding:10px;">關閉</button>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+        import { getDatabase, ref, set, onValue, push } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+        import Sortable from "https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/+esm";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyCLUmagiUpLd0qRUQ-TyoFt7hwrNK7xVDY",
+            authDomain: "havix-b6fe2.firebaseapp.com",
+            databaseURL: "https://havix-b6fe2-default-rtdb.firebaseio.com",
+            projectId: "havix-b6fe2",
+            storageBucket: "havix-b6fe2.appspot.com",
+            messagingSenderId: "731514229274",
+            appId: "1:731514229274:web:1f45a163f223e9fb79f7a3"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+
+        const allZones = ['bench-zone', 'court1-zone', 'court2-zone', 'court3-zone', 'court4-zone', 'waitingA-zone', 'waitingB-zone', 'waitingC-zone', 'waitingD-zone'];
+        const limitedZones = ['court1-zone', 'court2-zone', 'court3-zone', 'court4-zone', 'waitingA-zone', 'waitingB-zone', 'waitingC-zone', 'waitingD-zone'];
+        
+        let deleteMode = false;
+        let isLocalMoving = false;
+        let todayStats = {};
+        let historyStats = {}; // 格式: { "姓名": { wins: 0, total: 0, gender: 'M' } }
+        let logs = [];
+
+        onValue(ref(db, 'today_stats'), (s) => { todayStats = s.val() || {}; refreshWinRates(); });
+        onValue(ref(db, 'history_stats'), (s) => { historyStats = s.val() || {}; });
+        onValue(ref(db, 'match_logs'), (s) => { 
+            const data = s.val() || {};
+            logs = Object.values(data).reverse(); 
+        });
+
+        allZones.forEach(id => {
+            onValue(ref(db, id), (snapshot) => {
+                if (isLocalMoving) return;
+                const data = snapshot.val() || { players: [] };
+                const zone = document.getElementById(id);
+                zone.innerHTML = '';
+                (data.players || []).forEach(p => { zone.appendChild(createPlayerDOM(p.name, p.gender)); });
+            });
+        });
+
+        function createPlayerDOM(name, gender) {
+            const div = document.createElement('div');
+            div.className = `player ${gender === 'M' ? 'male' : 'female'}`;
+            div.dataset.name = name; div.dataset.gender = gender;
+            const s = todayStats[name] || { wins: 0, total: 0 };
+            const rate = s.total ? Math.round((s.wins / s.total) * 100) : 0;
+            div.innerHTML = `<button class="delete-x">✕</button><div class="player-name">${name}<span class="win-rate">${rate}%</span></div>`;
+            if(deleteMode) div.classList.add('delete-mode');
+            div.onclick = () => { if(div.parentElement.id.includes('court')) div.classList.toggle('winner'); };
+            div.querySelector('.delete-x').onclick = (e) => { e.stopPropagation(); div.remove(); syncToDB(); };
+            return div;
+        }
+
+        function refreshWinRates() {
+            document.querySelectorAll('.player').forEach(p => {
+                const name = p.dataset.name;
+                const s = todayStats[name] || { wins: 0, total: 0 };
+                const rateSpan = p.querySelector('.win-rate');
+                if(rateSpan) rateSpan.textContent = `${s.total ? Math.round((s.wins / s.total) * 100) : 0}%`;
+            });
+        }
+
+        window.addPlayer = function() {
+            const name = document.getElementById('newPlayer').value.trim();
+            const gender = document.getElementById('gender').value;
+            if(!name) return;
+            document.getElementById('bench-zone').appendChild(createPlayerDOM(name, gender));
+            document.getElementById('newPlayer').value = '';
+            syncToDB();
+        };
+
+        function syncToDB() {
+            allZones.forEach(id => {
+                const players = [...document.getElementById(id).querySelectorAll('.player')].map(p => ({
+                    name: p.dataset.name, gender: p.dataset.gender
+                }));
+                set(ref(db, id), { players });
+            });
+            set(ref(db, 'today_stats'), todayStats);
+            set(ref(db, 'history_stats'), historyStats);
+        }
+
+        allZones.forEach(id => {
+            Sortable.create(document.getElementById(id), {
+                group: 'players', animation: 150,
+                onStart: () => { isLocalMoving = true; },
+                onMove: (evt) => { if (limitedZones.includes(evt.to.id) && evt.to.children.length >= 4) return false; },
+                onEnd: () => { isLocalMoving = false; syncToDB(); }
+            });
+        });
+
+        window.endMatch = function(courtId) {
+            const courtZone = document.getElementById(courtId + '-zone');
+            const players = [...courtZone.querySelectorAll('.player')];
+            if(players.length === 0) return;
+
+            const winners = players.filter(p => p.classList.contains('winner')).map(p => p.dataset.name);
+            const losers = players.filter(p => !p.classList.contains('winner')).map(p => p.dataset.name);
+
+            if(winners.length > 0) {
+                push(ref(db, 'match_logs'), {
+                    time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
+                    winners: winners.join(' & '), losers: losers.join(' & ')
+                });
+            }
+
+            players.forEach(p => {
+                const name = p.dataset.name;
+                const gender = p.dataset.gender;
+                if(!todayStats[name]) todayStats[name] = { wins: 0, total: 0 };
+                if(!historyStats[name]) historyStats[name] = { wins: 0, total: 0, gender: gender };
+                
+                todayStats[name].total++; historyStats[name].total++;
+                if(winners.includes(name)) { todayStats[name].wins++; historyStats[name].wins++; }
+                
+                document.getElementById('bench-zone').appendChild(p);
+                p.classList.remove('winner');
+            });
+            
+            const waitQueues = ['waitingA-zone', 'waitingB-zone', 'waitingC-zone', 'waitingD-zone'];
+            const targetZones = [courtId + '-zone', ...waitQueues];
+            for(let i=0; i < targetZones.length - 1; i++) {
+                const to = document.getElementById(targetZones[i]);
+                const from = document.getElementById(targetZones[i+1]);
+                while(from.children.length > 0 && to.children.length < 4) to.appendChild(from.children[0]);
+            }
+            syncToDB();
+        };
+
+        window.resetToday = function() {
+            if(!confirm('清空今日名單、今日戰績、對戰日誌？')) return;
+            allZones.forEach(id => set(ref(db, id), { players: [] }));
+            set(ref(db, 'today_stats'), {});
+            set(ref(db, 'match_logs'), {});
+            syncToDB();
+        };
+
+        window.randomGroup = function() {
+            const bench = [...document.getElementById('bench-zone').children];
+            bench.sort(() => Math.random() - 0.5);
+            limitedZones.forEach(tid => {
+                const zone = document.getElementById(tid);
+                while(zone.children.length < 4 && bench.length > 0) zone.appendChild(bench.shift());
+            });
+            syncToDB();
+        };
+
+        // 隱藏管理選單
+        let titleClick = 0;
+        document.getElementById('mainTitle').onclick = () => {
+            titleClick++;
+            if(titleClick >= 3) {
+                const admin = document.getElementById('adminControls');
+                admin.style.display = admin.style.display === 'flex' ? 'none' : 'flex';
+                titleClick = 0;
+            }
+            setTimeout(() => titleClick = 0, 2000);
+        };
+
+        // 渲染排行榜 (男女分榜)
+        document.getElementById('showRankBtn').onclick = () => {
+            const allData = Object.entries(historyStats).map(([name, s]) => ({ name, ...s, rate: s.total ? Math.round((s.wins/s.total)*100) : 0 }));
+            const maleRank = allData.filter(p => p.gender === 'M').sort((a,b) => b.rate - a.rate || b.wins - a.wins);
+            const femaleRank = allData.filter(p => p.gender === 'F').sort((a,b) => b.rate - a.rate || b.wins - a.wins);
+
+            const buildTable = (data, title) => {
+                let html = `<div class="section-title">${title}</div><table class="rank-table"><tr><th>球員</th><th>勝場</th><th>勝率</th></tr>`;
+                data.forEach(p => { html += `<tr><td>${p.name}</td><td>${p.wins}</td><td>${p.rate}%</td></tr>`; });
+                return html + `</table>`;
+            };
+
+            document.getElementById('rankContent').innerHTML = buildTable(maleRank, '🏆 男子勝率榜') + buildTable(femaleRank, '🌸 女子勝率榜');
+            document.getElementById('rankModal').style.display = 'block';
+        };
+
+        // 渲染對戰日誌
+        document.getElementById('showLogBtn').onclick = () => {
+            let logHtml = logs.map(l => `<div style="margin-bottom:8px; border-bottom:1px solid #ddd; padding-bottom:5px;">
+                <span style="color:#888; font-size:12px;">[${l.time}]</span><br>
+                <b style="color:green;">${l.winners}</b> <span style="font-size:12px;">(勝)</span><br>
+                <span style="color:#666;">vs ${l.losers}</span>
+            </div>`).join('');
+            document.getElementById('logContent').innerHTML = logHtml || '尚無比賽紀錄';
+            document.getElementById('logModal').style.display = 'block';
+        };
+
+        document.getElementById('deleteModeBtn').onclick = function() {
+            deleteMode = !deleteMode;
+            this.classList.toggle('active', deleteMode);
+            document.querySelectorAll('.player').forEach(p => p.classList.toggle('delete-mode', deleteMode));
+        };
+    </script>
+</body>
+</html>

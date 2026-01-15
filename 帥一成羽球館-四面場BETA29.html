@@ -1,0 +1,204 @@
+<!DOCTYPE html><html lang="zh-TW"><head>    <meta charset="UTF-8">    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">    <title>快樂九成帥一成</title>    <style>
+        :root {
+            --bg: #f5f7fa; --accent: #e25b77; --dark: #333; --light: #fff; --male: #8fc1ff; --female: #ffb6c1; --winner: #3cb371; --border-radius: 16px;
+        }
+        /* 基礎美化 */
+        html, body { margin: 0; padding: 0; background: var(--bg); font-family: 'PingFang TC', 'Microsoft JhengHei', sans-serif; min-height: 100vh; color: var(--dark); overflow-x: hidden; }
+        body { display: flex; flex-direction: column; padding: 12px; box-sizing: border-box; }
+        
+        h1 { text-align: center; color: var(--accent); margin: 8px 0; font-size: 2rem; text-shadow: 1px 1px 2px rgba(0,0,0,0.1); letter-spacing: 2px; }
+        
+        /* 控制區佈局 */
+        #controls, #adminControls { display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; margin-bottom: 15px; }
+        #adminControls { display: none; background: #fff; padding: 15px; border-radius: var(--border-radius); border: 2px solid var(--accent); box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        input, select, button { padding: 10px 15px; border-radius: 10px; border: 1px solid #ddd; font-size: 15px; transition: 0.3s; }
+        button { background-color: var(--accent); color: white; font-weight: bold; border: none; cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        button:active { transform: scale(0.95); }
+
+        /* 主容器：支援電視與手機橫向並排 */
+        .container { display: flex; gap: 15px; flex-grow: 1; }
+
+        /* --- 核心排版邏輯 --- */
+        @media (orientation: landscape) {
+            .container { display: grid; grid-template-columns: 180px 1fr; }
+            .right-side { display: flex; flex-direction: column; gap: 20px; }
+            /* 強制場地與等待區在橫向時永遠並排 */
+            .courts, .waiting { 
+                display: grid !important; 
+                grid-template-columns: repeat(4, 1fr) !important; 
+                gap: 12px; 
+            }
+            .courts .player { height: 65px; font-size: 1.8rem !important; }
+
+            /* 電視端：鎖定高度 */
+            @media (min-width: 1200px) {
+                html, body { height: 100vh; overflow: hidden; }
+                .container { height: calc(100vh - 120px); }
+            }
+            /* 手機橫向：允許下拉 */
+            @media (max-width: 1199px) {
+                html, body { height: auto; overflow-y: auto; }
+                .courts .area { min-height: 280px; }
+            }
+        }
+
+        /* 區域樣式 */
+        .area { background: var(--light); border-radius: var(--border-radius); padding: 12px; display: flex; flex-direction: column; box-shadow: 0 6px 12px rgba(0,0,0,0.05); border: 1px solid #eee; }
+        .area h3 { text-align: center; color: #666; margin: 0 0 10px 0; font-size: 1.1rem; border-bottom: 2px solid #f0f0f0; padding-bottom: 5px; }
+        
+        /* 球員卡片：名字黑色 */
+        .player-zone { flex-grow: 1; display: flex; flex-direction: column; gap: 8px; min-height: 60px; }
+        .player { width: 100%; border-radius: 12px; font-weight: bold; display: flex; align-items: center; justify-content: center; color: #000; /* 名字黑色 */ box-shadow: 0 2px 4px rgba(0,0,0,0.08); position: relative; border: 2px solid transparent; }
+        .player.male { background: linear-gradient(135deg, #e3f2fd, var(--male)); }
+        .player.female { background: linear-gradient(135deg, #fce4ec, var(--female)); }
+        .player.winner { border-color: var(--winner) !important; box-shadow: 0 0 12px rgba(60, 179, 113, 0.4); }
+        .win-rate { position: absolute; bottom: 2px; right: 5px; font-size: 10px; color: #555; opacity: 0.8; }
+
+        /* 場地專屬顏色 */
+        .courts .area { border-top: 6px solid var(--accent); }
+        .waiting .area { background: #fafafa; border-top: 6px solid #aaa; }
+        .end-btn { margin-top: 10px; background: #555; color: #fff; padding: 10px; border-radius: 10px; font-size: 14px; }
+
+        /* 手機直向模式 */
+        @media (orientation: portrait) {
+            .container { flex-direction: column; }
+            .courts, .waiting { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+            #bench-zone { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+            .player { height: 50px; font-size: 1.2rem; }
+        }
+
+        .modal { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 90%; max-width: 500px; background: white; border-radius: 24px; padding: 25px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); z-index: 3000; }
+    </style></head><body>
+
+    <h1 id="mainTitle">快樂九成帥一成</h1>
+
+    <div id="controls">
+        <input type="text" id="newPlayer" placeholder="輸入姓名" style="width: 100px;">
+        <select id="gender"><option value="M">男</option><option value="F">女</option></select>
+        <button onclick="addPlayer()">＋ 新增球員</button>
+        <button id="delBtn" onclick="toggleDeleteMode()" style="background:#666;">🗑️ 刪除模式</button>
+    </div>
+
+    <div id="adminControls">
+        <button onclick="exportToCSV()" style="background:#4CAF50">📥 匯出報表</button>
+        <button id="showRankBtn" style="background:#2196F3">🏆 排行榜</button>
+        <button id="showLogBtn" style="background:#2196F3">📋 今日紀錄</button>
+        <button onclick="resetToday()" style="background:#ffa000">🔄 重置今日</button>
+        <button onclick="resetEverything()" style="background:#d32f2f">⚠️ 永久清空</button>
+    </div>
+
+    <div class="container">
+        <div class="area" id="bench">
+            <h3>休息區</h3>
+            <div class="player-zone" id="bench-zone"></div>
+        </div>
+
+        <div class="right-side">
+            <div class="courts">
+                <div class="area" id="court1"><h3>1 號場</h3><div class="player-zone" id="court1-zone"></div><button class="end-btn" onclick="endMatch('court1')">結束比賽</button></div>
+                <div class="area" id="court2"><h3>2 號場</h3><div class="player-zone" id="court2-zone"></div><button class="end-btn" onclick="endMatch('court2')">結束比賽</button></div>
+                <div class="area" id="court3"><h3>3 號場</h3><div class="player-zone" id="court3-zone"></div><button class="end-btn" onclick="endMatch('court3')">結束比賽</button></div>
+                <div class="area" id="court4"><h3>4 號場</h3><div class="player-zone" id="court4-zone"></div><button class="end-btn" onclick="endMatch('court4')">結束比賽</button></div>
+            </div>
+
+            <div class="waiting">
+                <div class="area" id="waitingA"><h3>等待 1</h3><div class="player-zone" id="waitingA-zone"></div></div>
+                <div class="area" id="waitingB"><h3>等待 2</h3><div class="player-zone" id="waitingB-zone"></div></div>
+                <div class="area" id="waitingC"><h3>等待 3</h3><div class="player-zone" id="waitingC-zone"></div></div>
+                <div class="area" id="waitingD"><h3>等待 4</h3><div class="player-zone" id="waitingD-zone"></div></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="rankModal" class="modal"><h3>🏆 歷史排行榜</h3><div id="rankContent" style="max-height: 60vh; overflow: auto;"></div><button onclick="this.parentElement.style.display='none'" style="width:100%; margin-top:15px;">關閉</button></div>
+    <div id="logModal" class="modal"><h3>📋 今日紀錄</h3><div id="logContent" style="max-height: 60vh; overflow: auto;"></div><button onclick="this.parentElement.style.display='none'" style="width:100%; margin-top:15px;">關閉</button></div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+        import { getDatabase, ref, set, onValue, push, remove } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+        import Sortable from "https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/+esm";
+
+        const firebaseConfig = { apiKey: "AIzaSyCLUmagiUpLd0qRUQ-TyoFt7hwrNK7xVDY", authDomain: "havix-b6fe2.firebaseapp.com", databaseURL: "https://havix-b6fe2-default-rtdb.firebaseio.com", projectId: "havix-b6fe2", storageBucket: "havix-b6fe2.appspot.com", messagingSenderId: "731514229274", appId: "1:731514229274:web:1f45a163f223e9fb79f7a3" };
+        const app = initializeApp(firebaseConfig); const db = getDatabase(app);
+        const allZones = ['bench-zone', 'court1-zone', 'court2-zone', 'court3-zone', 'court4-zone', 'waitingA-zone', 'waitingB-zone', 'waitingC-zone', 'waitingD-zone'];
+        const waitZones = ['waitingA-zone', 'waitingB-zone', 'waitingC-zone', 'waitingD-zone'];
+        let isLocalMoving = false, isDeleteMode = false, todayStats = {}, historyStats = {}, logs = [];
+
+        onValue(ref(db, 'today_stats'), (s) => { todayStats = s.val() || {}; refreshWinRates(); });
+        onValue(ref(db, 'history_stats'), (s) => { historyStats = s.val() || {}; });
+        onValue(ref(db, 'match_logs'), (s) => { logs = Object.values(s.val() || {}).reverse(); });
+
+        allZones.forEach(id => {
+            onValue(ref(db, id), (snapshot) => {
+                if (isLocalMoving) return;
+                const zone = document.getElementById(id); if(!zone) return;
+                zone.innerHTML = '';
+                (snapshot.val()?.players || []).forEach(p => zone.appendChild(createPlayerDOM(p.name, p.gender)));
+            });
+            Sortable.create(document.getElementById(id), { group: 'players', animation: 150, onStart: () => isLocalMoving = true, onMove: (evt) => { if (evt.to.id !== 'bench-zone' && evt.to.children.length >= 4) return false; }, onEnd: () => { isLocalMoving = false; syncToDB(); } });
+        });
+
+        function createPlayerDOM(name, gender) {
+            const div = document.createElement('div');
+            div.className = `player ${gender === 'M' ? 'male' : 'female'}`;
+            div.dataset.name = name; div.dataset.gender = gender;
+            const s = todayStats[name] || { wins: 0, total: 0 };
+            div.innerHTML = `<span>${name}</span><span class="win-rate">${s.total ? Math.round((s.wins/s.total)*100) : 0}%</span>`;
+            div.onclick = () => { if(isDeleteMode) { if(confirm(`移除 ${name}？`)) { div.remove(); syncToDB(); } } else if(div.parentElement.id.includes('court')) div.classList.toggle('winner'); };
+            return div;
+        }
+
+        function syncToDB() {
+            allZones.forEach(id => {
+                const zone = document.getElementById(id);
+                const players = [...zone.querySelectorAll('.player')].map(p => ({ name: p.dataset.name, gender: p.dataset.gender }));
+                set(ref(db, id), { players });
+            });
+            set(ref(db, 'today_stats'), todayStats);
+        }
+
+        window.endMatch = function(courtId) {
+            const courtZone = document.getElementById(courtId + '-zone');
+            const players = [...courtZone.querySelectorAll('.player')];
+            if(players.length === 0) return;
+            const winners = players.filter(p => p.classList.contains('winner')).map(p => p.dataset.name);
+            const losers = players.filter(p => !p.classList.contains('winner')).map(p => p.dataset.name);
+            players.forEach(p => {
+                const name = p.dataset.name;
+                if(!todayStats[name]) todayStats[name] = { wins: 0, total: 0 };
+                if(!historyStats[name]) historyStats[name] = { wins: 0, total: 0, gender: p.dataset.gender };
+                todayStats[name].total++; historyStats[name].total++;
+                if(winners.includes(name)) { todayStats[name].wins++; historyStats[name].wins++; }
+                document.getElementById('bench-zone').appendChild(p); p.classList.remove('winner');
+            });
+            if(winners.length > 0) push(ref(db, 'match_logs'), { time: new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}), winners: winners.join(', '), losers: losers.join(', ') });
+            const waitA = document.getElementById('waitingA-zone');
+            while (courtZone.children.length < 4 && waitA.children.length > 0) courtZone.appendChild(waitA.children[0]);
+            for (let i = 0; i < waitZones.length - 1; i++) {
+                const curr = document.getElementById(waitZones[i]); const next = document.getElementById(waitZones[i+1]);
+                while (curr.children.length < 4 && next.children.length > 0) curr.appendChild(next.children[0]);
+            }
+            syncToDB(); set(ref(db, 'history_stats'), historyStats);
+        };
+
+        window.addPlayer = function() { const name = document.getElementById('newPlayer').value.trim(); const gender = document.getElementById('gender').value; if(!name) return; document.getElementById('bench-zone').appendChild(createPlayerDOM(name, gender)); document.getElementById('newPlayer').value = ''; syncToDB(); };
+        window.toggleDeleteMode = function() { isDeleteMode = !isDeleteMode; document.getElementById('delBtn').style.background = isDeleteMode ? "#000" : "#666"; };
+        window.resetToday = function() { if(confirm('確定要清空今日紀錄嗎？')) { set(ref(db,'today_stats'),{}); set(ref(db,'match_logs'),{}); allZones.forEach(id=>set(ref(db,id),{players:[]})); } };
+        window.resetEverything = function() { const pw = prompt("請輸入高權限密碼："); if(pw==="60540391") remove(ref(db,'/')).then(()=>location.reload()); };
+        window.deleteFromHistory = function(name) { const pw = prompt(`確定永久刪除 ${name}？`); if(pw === "60540391") { delete historyStats[name]; set(ref(db, 'history_stats'), historyStats).then(() => document.getElementById('showRankBtn').click()); } };
+        window.exportToCSV = function() { if (logs.length === 0) return alert("目前尚無對戰紀錄"); let csvContent = "\uFEFF時間,勝隊,敗隊\n"; logs.forEach(l => { csvContent += `${l.time},"${l.winners}","${l.losers}"\n`; }); const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' }); const link = document.createElement("a"); link.href = URL.createObjectURL(blob); link.download = `羽球戰報_${new Date().toLocaleDateString()}.csv`; link.click(); };
+
+        document.getElementById('mainTitle').onclick = (function() { let count = 0, timer; return function() { count++; if(count >= 3) { const admin = document.getElementById('adminControls'); admin.style.display = (admin.style.display === 'flex') ? 'none' : 'flex'; count = 0; } clearTimeout(timer); timer = setTimeout(() => count = 0, 1500); }; })();
+        document.getElementById('showLogBtn').onclick = () => { document.getElementById('logContent').innerHTML = logs.map(l => `<div style="padding:10px; border-bottom:1px solid #eee;"><b>[${l.time}]</b><br><span style="color:green;">勝：${l.winners}</span><br><span style="color:red;">敗：${l.losers}</span></div>`).join('') || '尚無紀錄'; document.getElementById('logModal').style.display = 'block'; };
+        document.getElementById('showRankBtn').onclick = () => {
+            const all = Object.entries(historyStats).map(([name, s]) => ({ name, ...s, rate: s.total ? Math.round((s.wins/s.total)*100) : 0 }));
+            const buildRank = (players, title) => {
+                const sorted = players.sort((a,b)=>(b.wins-a.wins)||(b.rate-a.rate));
+                let html = `<div style="background:#f0f0f0;padding:10px;margin-top:10px;border-radius:10px;font-weight:bold;">${title}</div><table style="width:100%; text-align:left;">`;
+                sorted.forEach((p, index) => { html += `<tr><td>${index+1}</td><td>${p.name}</td><td>${p.wins}勝</td><td>${p.rate}%</td><td><button onclick="deleteFromHistory('${p.name}')" style="background:none;color:red;padding:5px;">🗑️</button></td></tr>`; });
+                return html + `</table>`;
+            };
+            document.getElementById('rankContent').innerHTML = buildRank(all.filter(p=>p.gender==='M'), '🏆 男子排行榜') + buildRank(all.filter(p=>p.gender==='F'), '🌸 女子排行榜'); document.getElementById('rankModal').style.display = 'block';
+        };
+        function refreshWinRates() { document.querySelectorAll('.player').forEach(p => { const s = todayStats[p.dataset.name] || { wins: 0, total: 0 }; const rs = p.querySelector('.win-rate'); if(rs) rs.textContent = `${s.total ? Math.round((s.wins/s.total)*100) : 0}%`; }); }
+    </script></body></html>

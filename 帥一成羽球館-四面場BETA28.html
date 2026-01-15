@@ -1,0 +1,192 @@
+<!DOCTYPE html><html lang="zh-TW"><head>    <meta charset="UTF-8">    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">    <title>快樂九成帥一成</title>    <style>
+        :root {
+            --bg: #0a1220; --accent: #ff4d4d; --dark: #111; --light: #ffffff; --male: #007bff; --female: #e83e8c; --winner: #28a745; --border-radius: 12px;
+        }
+        html, body { margin: 0; padding: 0; background: var(--bg); font-family: 'Segoe UI', 'Microsoft JhengHei', sans-serif; color: #fff; overflow-x: hidden; }
+        body { display: flex; flex-direction: column; padding: 10px; min-height: 100vh; box-sizing: border-box; }
+        
+        h1 { text-align: center; margin: 5px 0; font-size: 1.6rem; letter-spacing: 2px; }
+        
+        /* 行政功能區 */
+        #controls, #adminControls { display: flex; justify-content: center; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
+        #adminControls { display: none; background: rgba(255,255,255,0.1); padding: 10px; border-radius: 15px; border: 1px solid var(--accent); }
+        button { padding: 8px 12px; border-radius: 8px; background: var(--accent); color: white; border: none; font-weight: bold; cursor: pointer; }
+        input, select { padding: 8px; border-radius: 8px; background: #222; color: #fff; border: 1px solid #444; }
+
+        /* 主容器佈局 */
+        .container { display: flex; gap: 15px; flex-grow: 1; }
+
+        /* --- 橫屏模式核心：場地永遠橫向並排 --- */
+        @media (orientation: landscape) {
+            .container { display: grid; grid-template-columns: 160px 1fr; height: auto; }
+            .right-side { display: flex; flex-direction: column; gap: 20px; }
+            
+            /* 強制 1-4 號場地在橫屏時永遠是 4 欄 */
+            .courts, .waiting { 
+                display: grid !important; 
+                grid-template-columns: repeat(4, 1fr) !important; 
+                gap: 10px; 
+            }
+
+            /* 電視端 (寬度大) 鎖定高度 */
+            @media (min-width: 1200px) {
+                html, body { height: 100vh; overflow: hidden; }
+                .container { height: calc(100vh - 120px); }
+                .courts .player { height: 22%; font-size: 2rem !important; }
+            }
+            
+            /* 手機橫屏 (寬度小) 允許下拉，但維持 4 欄 */
+            @media (max-width: 1199px) {
+                html, body { height: auto; overflow-y: auto; }
+                .courts .area { min-height: 280px; } /* 確保場地夠高，名字才大 */
+                .courts .player { height: 50px; font-size: 1.5rem; }
+            }
+        }
+
+        /* 球員與場地樣式 */
+        .area { background: rgba(255,255,255,0.05); border: 1px solid #333; border-radius: var(--border-radius); padding: 8px; display: flex; flex-direction: column; }
+        .area h3 { text-align: center; color: #00d4ff; margin: 0 0 5px 0; font-size: 1rem; }
+        .player-zone { flex-grow: 1; display: flex; flex-direction: column; gap: 5px; }
+        .player { width: 100%; border-radius: 8px; font-weight: 900; display: flex; align-items: center; justify-content: center; position: relative; border: 1px solid rgba(255,255,255,0.1); box-sizing: border-box; }
+        .player.male { background: linear-gradient(135deg, #004e92, #000428); }
+        .player.female { background: linear-gradient(135deg, #962668, #670d10); }
+        .player.winner { border: 3px solid var(--winner) !important; box-shadow: 0 0 10px var(--winner); }
+        .win-rate { position: absolute; bottom: 1px; right: 4px; font-size: 9px; opacity: 0.6; }
+
+        .courts .area { border: 2px solid var(--accent); }
+        .end-btn { margin-top: 8px; padding: 10px; background: var(--accent); color: white; border-radius: 6px; font-weight: bold; cursor: pointer; }
+
+        /* 手機直向模式 */
+        @media (orientation: portrait) {
+            .container { flex-direction: column; }
+            .courts, .waiting { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+            #bench-zone { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; }
+            .player { height: 45px; font-size: 1.1rem; }
+        }
+
+        .modal { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 90%; max-width: 500px; background: #1a1a1a; border: 1px solid #444; border-radius: 20px; padding: 20px; z-index: 10000; }
+    </style></head><body>
+    <h1 id="mainTitle">快樂九成帥一成</h1>
+    <div id="controls">
+        <input type="text" id="newPlayer" placeholder="姓名" style="width: 70px;">
+        <select id="gender"><option value="M">男</option><option value="F">女</option></select>
+        <button onclick="addPlayer()">新增</button>
+        <button id="delBtn" onclick="toggleDeleteMode()">🗑️ 刪除</button>
+        <div id="adminControls">
+            <button onclick="exportToCSV()" style="background:#28a745;">CSV</button>
+            <button id="showRankBtn" style="background:#007bff;">🏆</button>
+            <button id="showLogBtn" style="background:#007bff;">📋</button>
+            <button onclick="resetToday()" style="background:#fd7e14;">重置今日</button>
+            <button onclick="resetEverything()" style="background:#dc3545;">清空歷史</button>
+        </div>
+    </div>
+    <div class="container">
+        <div class="area" id="bench"><h3>休息區</h3><div class="player-zone" id="bench-zone"></div></div>
+        <div class="right-side">
+            <div class="courts">
+                <div class="area" id="court1"><h3>1 號場</h3><div class="player-zone" id="court1-zone"></div><button class="end-btn" onclick="endMatch('court1')">結束</button></div>
+                <div class="area" id="court2"><h3>2 號場</h3><div class="player-zone" id="court2-zone"></div><button class="end-btn" onclick="endMatch('court2')">結束</button></div>
+                <div class="area" id="court3"><h3>3 號場</h3><div class="player-zone" id="court3-zone"></div><button class="end-btn" onclick="endMatch('court3')">結束</button></div>
+                <div class="area" id="court4"><h3>4 號場</h3><div class="player-zone" id="court4-zone"></div><button class="end-btn" onclick="endMatch('court4')">結束</button></div>
+            </div>
+            <div class="waiting">
+                <div class="area" id="waitingA"><h3>等待 1</h3><div class="player-zone" id="waitingA-zone"></div></div>
+                <div class="area" id="waitingB"><h3>等待 2</h3><div class="player-zone" id="waitingB-zone"></div></div>
+                <div class="area" id="waitingC"><h3>等待 3</h3><div class="player-zone" id="waitingC-zone"></div></div>
+                <div class="area" id="waitingD"><h3>等待 4</h3><div class="player-zone" id="waitingD-zone"></div></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="rankModal" class="modal"><h3>🏆 排行榜</h3><div id="rankContent" style="max-height:60vh; overflow:auto;"></div><button onclick="this.parentElement.style.display='none'" style="width:100%; padding:10px; margin-top:10px;">關閉</button></div>
+    <div id="logModal" class="modal"><h3>📋 紀錄</h3><div id="logContent" style="max-height:60vh; overflow:auto;"></div><button onclick="this.parentElement.style.display='none'" style="width:100%; padding:10px; margin-top:10px;">關閉</button></div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+        import { getDatabase, ref, set, onValue, push, remove } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+        import Sortable from "https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/+esm";
+
+        const firebaseConfig = { apiKey: "AIzaSyCLUmagiUpLd0qRUQ-TyoFt7hwrNK7xVDY", authDomain: "havix-b6fe2.firebaseapp.com", databaseURL: "https://havix-b6fe2-default-rtdb.firebaseio.com", projectId: "havix-b6fe2", storageBucket: "havix-b6fe2.appspot.com", messagingSenderId: "731514229274", appId: "1:731514229274:web:1f45a163f223e9fb79f7a3" };
+        const app = initializeApp(firebaseConfig); const db = getDatabase(app);
+        const allZones = ['bench-zone', 'court1-zone', 'court2-zone', 'court3-zone', 'court4-zone', 'waitingA-zone', 'waitingB-zone', 'waitingC-zone', 'waitingD-zone'];
+        const waitZones = ['waitingA-zone', 'waitingB-zone', 'waitingC-zone', 'waitingD-zone'];
+        let isLocalMoving = false, isDeleteMode = false, todayStats = {}, historyStats = {}, logs = [];
+
+        onValue(ref(db, 'today_stats'), (s) => { todayStats = s.val() || {}; refreshWinRates(); });
+        onValue(ref(db, 'history_stats'), (s) => { historyStats = s.val() || {}; });
+        onValue(ref(db, 'match_logs'), (s) => { logs = Object.values(s.val() || {}).reverse(); });
+
+        allZones.forEach(id => {
+            onValue(ref(db, id), (snapshot) => {
+                if (isLocalMoving) return;
+                const zone = document.getElementById(id); if(!zone) return;
+                zone.innerHTML = '';
+                (snapshot.val()?.players || []).forEach(p => zone.appendChild(createPlayerDOM(p.name, p.gender)));
+            });
+            Sortable.create(document.getElementById(id), { group: 'players', animation: 150, onStart: () => isLocalMoving = true, onMove: (evt) => { if (evt.to.id !== 'bench-zone' && evt.to.children.length >= 4) return false; }, onEnd: () => { isLocalMoving = false; syncToDB(); } });
+        });
+
+        function createPlayerDOM(name, gender) {
+            const div = document.createElement('div');
+            div.className = `player ${gender === 'M' ? 'male' : 'female'}`;
+            div.dataset.name = name; div.dataset.gender = gender;
+            const s = todayStats[name] || { wins: 0, total: 0 };
+            div.innerHTML = `<span>${name}</span><span class="win-rate">${s.total ? Math.round((s.wins/s.total)*100) : 0}%</span>`;
+            div.onclick = () => { if(isDeleteMode) { if(confirm(`移除 ${name}？`)) { div.remove(); syncToDB(); } } else if(div.parentElement.id.includes('court')) div.classList.toggle('winner'); };
+            return div;
+        }
+
+        function syncToDB() {
+            allZones.forEach(id => {
+                const zone = document.getElementById(id);
+                const players = [...zone.querySelectorAll('.player')].map(p => ({ name: p.dataset.name, gender: p.dataset.gender }));
+                set(ref(db, id), { players });
+            });
+            set(ref(db, 'today_stats'), todayStats);
+        }
+
+        window.endMatch = function(courtId) {
+            const courtZone = document.getElementById(courtId + '-zone');
+            const players = [...courtZone.querySelectorAll('.player')];
+            if(players.length === 0) return;
+            const winners = players.filter(p => p.classList.contains('winner')).map(p => p.dataset.name);
+            const losers = players.filter(p => !p.classList.contains('winner')).map(p => p.dataset.name);
+            players.forEach(p => {
+                const name = p.dataset.name;
+                if(!todayStats[name]) todayStats[name] = { wins: 0, total: 0 };
+                if(!historyStats[name]) historyStats[name] = { wins: 0, total: 0, gender: p.dataset.gender };
+                todayStats[name].total++; historyStats[name].total++;
+                if(winners.includes(name)) { todayStats[name].wins++; historyStats[name].wins++; }
+                document.getElementById('bench-zone').appendChild(p); p.classList.remove('winner');
+            });
+            if(winners.length > 0) push(ref(db, 'match_logs'), { time: new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}), winners: winners.join(', '), losers: losers.join(', ') });
+            const waitA = document.getElementById('waitingA-zone');
+            while (courtZone.children.length < 4 && waitA.children.length > 0) courtZone.appendChild(waitA.children[0]);
+            for (let i = 0; i < waitZones.length - 1; i++) {
+                const curr = document.getElementById(waitZones[i]); const next = document.getElementById(waitZones[i+1]);
+                while (curr.children.length < 4 && next.children.length > 0) curr.appendChild(next.children[0]);
+            }
+            syncToDB(); set(ref(db, 'history_stats'), historyStats);
+        };
+
+        window.addPlayer = function() { const name = document.getElementById('newPlayer').value.trim(); const gender = document.getElementById('gender').value; if(!name) return; document.getElementById('bench-zone').appendChild(createPlayerDOM(name, gender)); document.getElementById('newPlayer').value = ''; syncToDB(); };
+        window.toggleDeleteMode = function() { isDeleteMode = !isDeleteMode; document.getElementById('delBtn').style.background = isDeleteMode ? "#f00" : "#ff4d4d"; };
+        window.resetToday = function() { if(confirm('重置今日？')) { set(ref(db,'today_stats'),{}); set(ref(db,'match_logs'),{}); allZones.forEach(id=>set(ref(db,id),{players:[]})); } };
+        window.resetEverything = function() { const pw = prompt("密碼："); if(pw==="60540391") remove(ref(db,'/')).then(()=>location.reload()); };
+        window.deleteFromHistory = function(name) { const pw = prompt(`永久刪除 ${name}？`); if(pw === "60540391") { delete historyStats[name]; set(ref(db, 'history_stats'), historyStats).then(() => document.getElementById('showRankBtn').click()); } };
+        window.exportToCSV = function() { if (logs.length === 0) return alert("尚無紀錄"); let csvContent = "\uFEFF時間,勝隊,敗隊\n"; logs.forEach(l => { csvContent += `${l.time},"${l.winners}","${l.losers}"\n`; }); const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' }); const link = document.createElement("a"); link.href = URL.createObjectURL(blob); link.download = `戰報.csv`; link.click(); };
+
+        document.getElementById('mainTitle').onclick = (function() { let count = 0, timer; return function() { count++; if(count >= 3) { const admin = document.getElementById('adminControls'); admin.style.display = (admin.style.display === 'flex') ? 'none' : 'flex'; count = 0; } clearTimeout(timer); timer = setTimeout(() => count = 0, 1500); }; })();
+        document.getElementById('showLogBtn').onclick = () => { document.getElementById('logContent').innerHTML = logs.map(l => `<div style="padding:10px; border-bottom:1px solid #333;"><b>[${l.time}]</b> 勝：${l.winners} 敗：${l.losers}</div>`).join('') || '尚無紀錄'; document.getElementById('logModal').style.display = 'block'; };
+        document.getElementById('showRankBtn').onclick = () => {
+            const all = Object.entries(historyStats).map(([name, s]) => ({ name, ...s, rate: s.total ? Math.round((s.wins/s.total)*100) : 0 }));
+            const buildRank = (players, title) => {
+                const sorted = players.sort((a,b)=>(b.wins-a.wins)||(b.rate-a.rate));
+                let html = `<div style="background:#333;padding:5px;margin-top:10px;">${title}</div><table style="width:100%;font-size:14px;">`;
+                sorted.forEach((p, index) => { html += `<tr><td>${index+1}</td><td>${p.name}</td><td>${p.wins}勝</td><td>${p.rate}%</td><td><button onclick="deleteFromHistory('${p.name}')" style="background:none;color:red;">🗑️</button></td></tr>`; });
+                return html + `</table>`;
+            };
+            document.getElementById('rankContent').innerHTML = buildRank(all.filter(p=>p.gender==='M'), '男子組') + buildRank(all.filter(p=>p.gender==='F'), '女子組'); document.getElementById('rankModal').style.display = 'block';
+        };
+        function refreshWinRates() { document.querySelectorAll('.player').forEach(p => { const s = todayStats[p.dataset.name] || { wins: 0, total: 0 }; const rs = p.querySelector('.win-rate'); if(rs) rs.textContent = `${s.total ? Math.round((s.wins/s.total)*100) : 0}%`; }); }
+    </script></body></html>

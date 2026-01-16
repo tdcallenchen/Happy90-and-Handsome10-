@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>快樂九成帥一成</title>
+    <style>
+        :root {
+            --bg: #cce7ff; --accent: #e25b77; --dark: #000; --light: #fff; 
+            --male: #8fc1ff; --female: #ffb6c1; --winner: #3cb371; --border-radius: 12px;
+            color-scheme: light;
+        }
+        html, body { margin: 0; padding: 0; background: var(--bg); font-family: 'Segoe UI', 'Microsoft JhengHei', sans-serif; min-height: 100vh; }
+        body { display: flex; flex-direction: column; padding: 10px; box-sizing: border-box; }
+        h1 { text-align: center; color: var(--accent); cursor: pointer; margin: 5px 0; user-select: none; }
+        #controls, #adminControls { display: flex; justify-content: center; gap: 5px; flex-wrap: wrap; margin-bottom: 8px; }
+        #adminControls { display: none; background: rgba(255, 255, 255, 0.8); padding: 8px; border-radius: var(--border-radius); border: 2px solid var(--accent); }
+        input, select, button { padding: 6px; border-radius: 8px; border: 1px solid var(--accent); font-size: 14px; }
+        button { background-color: var(--accent); color: white; font-weight: bold; cursor: pointer; border: none; }
+        .container { display: grid; grid-template-columns: 200px 1fr; gap: 10px; flex-grow: 1; }
+        .area { background: var(--light); border: 3px solid var(--accent); border-radius: var(--border-radius); padding: 8px; display: flex; flex-direction: column; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        .area h3 { text-align: center; color: var(--accent); margin: 0 0 5px 0; border-bottom: 2px dashed var(--bg); }
+        .player-zone { flex-grow: 1; display: flex; flex-direction: column; gap: 5px; min-height: 50px; }
+        #bench-zone { display: grid; grid-template-columns: repeat(2, 1fr); gap: 5px; align-content: flex-start; }
+        .player { position: relative; width: 100%; height: 40px; background: #fff; border: 2px solid var(--accent); border-radius: 8px; font-weight: 900; display: flex; align-items: center; justify-content: center; cursor: grab; user-select: none; color: #000 !important; }
+        .player.male { background: var(--male) !important; }
+        .player.female { background: var(--female) !important; }
+        .player.winner { background-color: var(--winner) !important; color: white !important; }
+        .win-rate { font-size: 10px; margin-left: 4px; color: #333; }
+        .right-side { display: flex; flex-direction: column; gap: 10px; }
+        .courts, .waiting { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+        .end-btn { width: 100%; margin-top: 4px; padding: 4px; font-size: 12px; background: #444; color: white; border-radius: 5px; cursor: pointer; }
+        @media (orientation: portrait) {
+            .container { display: flex; flex-direction: column; gap: 15px; }
+            .courts, .waiting { grid-template-columns: repeat(2, 1fr); }
+        }
+        .modal { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 90%; max-width: 400px; background: white; border-radius: 20px; padding: 20px; box-shadow: 0 10px 50px rgba(0,0,0,0.5); z-index: 2000; }
+    </style>
+</head>
+<body>
+
+<h1 id="mainTitle">快樂九成帥一成</h1>
+
+<div id="controls">
+    <input type="text" id="newPlayer" placeholder="姓名" style="width: 80px;">
+    <select id="gender"><option value="M">男</option><option value="F">女</option></select>
+    <button onclick="addPlayer()">新增</button>
+    <button id="delBtn" onclick="toggleDeleteMode()">🗑️ 刪除</button>
+</div>
+
+<div id="adminControls">
+    <button onclick="resetToday()" style="background:#ffa000">🔄 重置今日</button>
+    <button onclick="showRank()" style="background:#2196F3">🏆 排行榜</button>
+</div>
+
+<div class="container">
+    <div class="area" id="bench">
+        <h3>休息區</h3>
+        <div class="player-zone" id="bench-zone"></div>
+    </div>
+    <div class="right-side">
+        <div class="courts">
+            <div class="area" id="court1"><h3>1 號場</h3><div class="player-zone" id="court1-zone"></div><button class="end-btn" onclick="endMatch('court1')">結束</button></div>
+            <div class="area" id="court2"><h3>2 號場</h3><div class="player-zone" id="court2-zone"></div><button class="end-btn" onclick="endMatch('court2')">結束</button></div>
+            <div class="area" id="court3"><h3>3 號場</h3><div class="player-zone" id="court3-zone"></div><button class="end-btn" onclick="endMatch('court3')">結束</button></div>
+            <div class="area" id="court4"><h3>4 號場</h3><div class="player-zone" id="court4-zone"></div><button class="end-btn" onclick="endMatch('court4')">結束</button></div>
+        </div>
+        <div class="waiting">
+            <div class="area" id="waitingA"><h3>等待 1</h3><div class="player-zone" id="waitingA-zone"></div></div>
+            <div class="area" id="waitingB"><h3>等待 2</h3><div class="player-zone" id="waitingB-zone"></div></div>
+            <div class="area" id="waitingC"><h3>等待 3</h3><div class="player-zone" id="waitingC-zone"></div></div>
+            <div class="area" id="waitingD"><h3>等待 4</h3><div class="player-zone" id="waitingD-zone"></div></div>
+        </div>
+    </div>
+</div>
+
+<div id="rankModal" class="modal">
+    <h3>🏆 排行榜</h3>
+    <div id="rankContent" style="max-height: 300px; overflow-y: auto;"></div>
+    <button onclick="document.getElementById('rankModal').style.display='none'" style="width:100%; margin-top:10px;">關閉</button>
+</div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+    import Sortable from "https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/+esm";
+
+    const firebaseConfig = { 
+        apiKey: "AIzaSyCLUmagiUpLd0qRUQ-TyoFt7hwrNK7xVDY", 
+        authDomain: "havix-b6fe2.firebaseapp.com", 
+        databaseURL: "https://havix-b6fe2-default-rtdb.firebaseio.com", 
+        projectId: "havix-b6fe2" 
+    };
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+
+    const zones = ['bench-zone', 'court1-zone', 'court2-zone', 'court3-zone', 'court4-zone', 'waitingA-zone', 'waitingB-zone', 'waitingC-zone', 'waitingD-zone'];
+    let todayStats = {}, historyStats = {}, isLocalMoving = false, isDeleteMode = false;
+
+    // 監聽 Firebase 資料
+    onValue(ref(db, '/'), (snapshot) => {
+        if (isLocalMoving) return;
+        const data = snapshot.val() || {};
+        todayStats = data.today_stats || {};
+        historyStats = data.history_stats || {};
+        
+        zones.forEach(id => {
+            const el = document.getElementById(id);
+            if (!el) return;
+            el.innerHTML = '';
+            const players = (data[id] && data[id].players) ? data[id].players : [];
+            players.forEach(p => el.appendChild(createPlayerDOM(p.name, p.gender)));
+        });
+    });
+
+    function createPlayerDOM(name, gender) {
+        const div = document.createElement('div');
+        div.className = `player ${gender === 'M' ? 'male' : 'female'}`;
+        div.dataset.name = name;
+        div.dataset.gender = gender;
+        
+        const s = todayStats[name] || { wins: 0, total: 0 };
+        const rate = s.total ? Math.round((s.wins / s.total) * 100) : 0;
+        div.innerHTML = `${name} <span class="win-rate">${rate}%</span>`;
+
+        div.onclick = () => {
+            if (isDeleteMode) {
+                if (confirm(`刪除 ${name}?`)) { div.remove(); sync(); }
+                return;
+            }
+            if (div.parentElement.id.includes('court')) {
+                const winners = div.parentElement.querySelectorAll('.player.winner');
+                // 物理限制核心：超過兩人不准點
+                if (winners.length >= 2 && !div.classList.contains('winner')) return;
+                div.classList.toggle('winner');
+            }
+        };
+        return div;
+    }
+
+    // 初始化 Sortable 拖拽
+    zones.forEach(id => {
+        Sortable.create(document.getElementById(id), {
+            group: 'players',
+            animation: 150,
+            onStart: () => { isLocalMoving = true; },
+            onEnd: () => { isLocalMoving = false; sync(); }
+        });
+    });
+
+    // 同步函式：將全場狀態寫回 Firebase
+    function sync() {
+        const updates = {};
+        zones.forEach(id => {
+            const el = document.getElementById(id);
+            updates[id] = { players: [...el.querySelectorAll('.player')].map(p => ({ 
+                name: p.dataset.name, 
+                gender: p.dataset.gender 
+            })) };
+        });
+        updates['today_stats'] = todayStats;
+        updates['history_stats'] = historyStats;
+        set(ref(db, '/'), updates);
+    }
+
+    // 新增球員
+    window.addPlayer = function() {
+        const nameInput = document.getElementById('newPlayer');
+        const name = nameInput.value.trim();
+        const gender = document.getElementById('gender').value;
+        if (!name) return;
+        document.getElementById('bench-zone').appendChild(createPlayerDOM(name, gender));
+        nameInput.value = '';
+        sync();
+    };
+
+    // 結算比賽（含 4 人限制遞補邏輯）
+    window.endMatch = function(courtId) {
+        const zone = document.getElementById(courtId + '-zone');
+        const players = [...zone.querySelectorAll('.player')];
+        const winners = players.filter(p => p.classList.contains('winner'));
+        
+        if (winners.length !== 2) return alert("請選 2 位勝利者！");
+
+        const winNames = winners.map(p => p.dataset.name);
+        players.forEach(p => {
+            const n = p.dataset.name;
+            if (!todayStats[n]) todayStats[n] = { wins: 0, total: 0 };
+            if (!historyStats[n]) historyStats[n] = { wins: 0, total: 0, gender: p.dataset.gender };
+            
+            todayStats[n].total++;
+            historyStats[n].total++;
+            if (winNames.includes(n)) {
+                todayStats[n].wins++;
+                historyStats[n].wins++;
+            }
+            p.classList.remove('winner');
+            document.getElementById('bench-zone').appendChild(p);
+        });
+
+        // 遞補邏輯 (等待 1 -> 4)
+        const waitOrder = ['waitingA-zone', 'waitingB-zone', 'waitingC-zone', 'waitingD-zone'];
+        let target = zone;
+        waitOrder.forEach(sid => {
+            const source = document.getElementById(sid);
+            // 嚴格遵守各區不超過 4 人
+            while (target.children.length < 4 && source.children.length > 0) {
+                target.appendChild(source.children[0]);
+            }
+            target = source;
+        });
+        sync();
+    };
+
+    window.toggleDeleteMode = function() {
+        isDeleteMode = !isDeleteMode;
+        document.getElementById('delBtn').textContent = isDeleteMode ? "🛑 停止" : "🗑️ 刪除";
+        document.getElementById('delBtn').style.background = isDeleteMode ? "#000" : "#e25b77";
+    };
+
+    // 管理員進入密碼
+    document.getElementById('mainTitle').onclick = () => {
+        const pw = prompt("請輸入密碼解鎖管理員功能:");
+        if (pw === "60540391") {
+            document.getElementById('adminControls').style.display = 'flex';
+            alert("已開啟管理模式");
+        }
+    };
+
+    window.resetToday = function() {
+        if (!confirm("確定重置今日所有進度嗎？")) return;
+        todayStats = {};
+        zones.forEach(id => { 
+            if (id !== 'bench-zone') document.getElementById(id).innerHTML = ''; 
+        });
+        sync();
+    };
+
+    window.showRank = function() {
+        const sorted = Object.entries(historyStats)
+            .map(([name, s]) => ({ name, ...s, rate: s.total ? Math.round((s.wins/s.total)*100) : 0 }))
+            .sort((a, b) => b.rate - a.rate);
+        let html = '<table style="width:100%; border-collapse:collapse;"><tr><th>球員</th><th>勝場</th><th>勝率</th></tr>';
+        sorted.forEach(p => {
+            html += `<tr style="border-bottom:1px solid #eee"><td style="padding:5px">${p.name}</td><td>${p.wins}</td><td>${p.rate}%</td></tr>`;
+        });
+        document.getElementById('rankContent').innerHTML = html + '</table>';
+        document.getElementById('rankModal').style.display = 'block';
+    };
+</script>
+</body>
+</html>

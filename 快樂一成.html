@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<title>神秘 PK｜完整排行榜</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+*{ box-sizing:border-box; }
+body{
+  margin:0;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont;
+  background:linear-gradient(135deg,#eef2ff,#f8fafc);
+  display:flex;
+  justify-content:center;
+  padding:20px;
+}
+.app{ width:100%; max-width:460px; }
+h1{text-align:center;margin-bottom:10px;}
+textarea,button{
+  width:100%;
+  padding:14px;
+  font-size:16px;
+  border-radius:14px;
+  border:1px solid #ddd;
+  margin-top:10px;
+}
+button{ background:#6366f1; color:#fff; border:none; font-size:18px; cursor:pointer; }
+
+.card{
+  background:#fff;
+  border-radius:22px;
+  padding:28px;
+  margin-top:20px;
+  box-shadow:0 14px 34px rgba(0,0,0,.14);
+  text-align:center;
+}
+.pick{
+  background:#fefefe;
+  color:#111;
+  font-weight:700;
+  margin:10px 0;
+  font-size:18px;
+  padding:12px 0;
+  border-radius:12px;
+  border:1px solid #ccc;
+  cursor:pointer;
+}
+.pick:hover{
+  background:#f0f0f0;
+  color:#111;
+}
+.vs{
+  margin:18px 0;
+  color:#444;
+  font-weight:800;
+  font-size:18px;
+}
+.rankitem{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  padding:10px 0;
+  border-bottom:1px dashed #e5e7eb;
+}
+.rankname{
+  font-weight:800;
+  color:#111;
+}
+.ranknum{
+  font-weight:700;
+  color:#4338ca;
+}
+.crown{ font-size:44px; }
+</style>
+</head>
+<body>
+<div class="app">
+
+<h1>🔥 神秘 PK 🔥</h1>
+
+<textarea id="names" rows="6" placeholder="一行一個名字"></textarea>
+<button onclick="start()">開始 PK</button>
+
+<div id="game"></div>
+
+</div>
+
+<script>
+let current=[], winners=[], idx=0, round=1;
+let eliminated={};
+
+const shuffle = arr => {
+  for(let i=arr.length-1;i>0;i--){
+    const j=Math.floor(Math.random()*(i+1));
+    [arr[i],arr[j]]=[arr[j],arr[i]];
+  }
+};
+
+function start(){
+  const list=document.getElementById('names').value
+    .split('\n').map(n=>n.trim()).filter(Boolean);
+  if(list.length<2){ alert('至少要 2 個名字'); return; }
+
+  shuffle(list);
+  current=list;
+  winners=[];
+  eliminated={};
+  idx=0;
+  round=1;
+  nextMatch();
+}
+
+function nextMatch(){
+  const g=document.getElementById('game');
+  g.innerHTML='';
+
+  if(current.length===1){
+    showResult(current[0]);
+    return;
+  }
+
+  if(idx>=current.length){
+    current=winners;
+    winners=[];
+    idx=0;
+    round++;
+    shuffle(current);
+    nextMatch();
+    return;
+  }
+
+  const a=current[idx];
+  const b=current[idx+1];
+  if(!b){
+    winners.push(a);
+    idx+=2;
+    nextMatch();
+    return;
+  }
+
+  g.innerHTML=`
+    <div class="card">
+      <h3>第 ${round} 輪</h3>
+      <button class="pick" onclick="pick('${a}','${b}')">${a}</button>
+      <div class="vs">VS</div>
+      <button class="pick" onclick="pick('${b}','${a}')">${b}</button>
+    </div>`;
+}
+
+function pick(win, lose){
+  winners.push(win);
+  eliminated[lose]=round;
+  idx+=2;
+  nextMatch();
+}
+
+function showResult(champion){
+  const g=document.getElementById('game');
+
+  const totalPlayers = Object.keys(eliminated).length + 1;
+  const results = [];
+
+  // 冠軍
+  results.push({ name: champion, survive: round+1, rank: 1 });
+
+  // 計算其他人名次
+  // 步驟：1. 收集每輪淘汰人數 2. 計算起始名次
+  const roundsMap = {};
+  for(const r of Object.values(eliminated)){
+    if(!roundsMap[r]) roundsMap[r]=0;
+    roundsMap[r]++;
+  }
+
+  // 計算每輪名次起點
+  const sortedRounds = Object.keys(roundsMap).map(Number).sort((a,b)=>b-a);
+  const roundStartRank = {};
+  let rankCounter = 2; // 冠軍是1，亞軍開始
+  for(let r of sortedRounds){
+    roundStartRank[r] = rankCounter;
+    rankCounter += roundsMap[r];
+  }
+
+  for(const [name,r] of Object.entries(eliminated)){
+    results.push({
+      name,
+      survive: r,
+      rank: roundStartRank[r]
+    });
+  }
+
+  // 排序：走得最遠的在前
+  results.sort((a,b)=>a.survive-b.survive); // 走得少的在後
+  results.sort((a,b)=>b.survive-a.survive); // 走得多的在前
+
+  g.innerHTML=`
+    <div class="card">
+      <div class="crown">🏆</div>
+      <h2>最終排行榜</h2>
+      ${results.map((r,i)=>`
+        <div class="rankitem">
+          <div class="rankname" style="
+            font-size:${i===0?22:i<3?20:18}px;
+            color:${i===0?'#b45309':i===1?'#334155':i===2?'#78350f':'#111'};
+          ">
+            ${i===0?'🥇 ':i===1?'🥈 ':i===2?'🥉 ':''}${r.name}
+          </div>
+          <div class="ranknum">第 ${r.rank} 名</div>
+        </div>
+      `).join('')}
+    </div>`;
+}
+</script>
+
+</body>
+</html>

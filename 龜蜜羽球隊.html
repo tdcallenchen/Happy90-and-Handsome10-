@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <title>龜蜜羽球隊</title>
+    <style>
+        :root { 
+            --bg: #e9ecef; 
+            --accent: #212529; 
+            --secondary: #6c757d; 
+            --white: #ffffff; 
+            --male-border: #343a40; 
+            --female-border: #2d6a4f; 
+        }
+
+        body { 
+            font-family: 'PingFang TC', 'Heiti TC', sans-serif; 
+            margin: 0; padding: 20px; background: var(--bg); 
+            display: flex; flex-direction: column; align-items: center; color: var(--accent); 
+        }
+        
+        .title-container { display: flex; align-items: center; gap: 15px; margin-bottom: 20px; }
+        .turtle-icon { font-size: 45px; }
+        h1 { color: var(--accent); font-size: 32px; font-weight: 800; margin: 0; }
+        
+        #controls { 
+            background: var(--white); padding: 20px; border-radius: 12px; 
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1); margin-bottom: 25px;
+            border: 2px solid var(--accent);
+        }
+        #newPlayer { padding: 10px; border: 2px solid var(--secondary); border-radius: 6px; font-size: 16px; width: 160px; font-weight: bold; }
+        select { padding: 10px; border-radius: 6px; border: 2px solid var(--secondary); background: white; font-size: 16px; font-weight: bold; }
+        
+        button { 
+            font-size: 16px; padding: 10px 20px; margin-left: 5px; border: 2px solid var(--accent); 
+            border-radius: 8px; background: var(--accent); color: var(--white); 
+            cursor: pointer; transition: 0.2s; font-weight: bold;
+        }
+        button:hover { background: #495057; border-color: #495057; }
+        #deleteModeBtn.active { background: #c1121f !important; border-color: #c1121f !important; }
+
+        .container { display: flex; justify-content: center; gap: 20px; width: 98%; max-width: 1200px; }
+        .right-side { display: flex; flex-direction: column; gap: 20px; flex: 2; }
+        .courts, .waiting { display: flex; gap: 20px; }
+        
+        .area { 
+            flex: 1; background: var(--white); border: 3px solid var(--accent); 
+            border-radius: 15px; padding: 15px; box-shadow: 6px 6px 0px rgba(0,0,0,0.1);
+            display: flex; flex-direction: column; min-height: 200px; 
+        }
+        .area h3 { 
+            text-align: center; background: var(--accent); color: var(--white);
+            margin: -15px -15px 15px -15px; padding: 10px; border-radius: 11px 11px 0 0;
+            font-size: 18px; letter-spacing: 2px;
+        }
+        
+        .player-zone { flex-grow: 1; min-height: 120px; }
+        #bench { flex: 1; max-width: 280px; min-height: 600px; }
+        
+        .player { 
+            position: relative; padding: 15px; margin-bottom: 12px; 
+            border-radius: 10px; font-weight: 900; text-align: center; 
+            cursor: grab; border: 2px solid var(--accent);
+            background: var(--white); font-size: 18px;
+            box-shadow: 2px 2px 0px rgba(0,0,0,0.05);
+        }
+        .player.male { border-left: 10px solid var(--male-border); }
+        .player.female { border-left: 10px solid var(--female-border); }
+        
+        .player .delete-x { 
+            display: none; position: absolute; right: 10px; top: 50%; 
+            transform: translateY(-50%); color: #c1121f; border: none; 
+            background: #f8d7da; border-radius: 50%; width: 25px; height: 25px;
+            font-size: 16px; cursor: pointer; line-height: 20px;
+        }
+        .player.delete-mode .delete-x { display: block; }
+        
+        .area-controls { text-align: center; margin-top: 15px; }
+        .btn-finish { background: #f8f9fa; color: var(--accent); border: 2px solid var(--accent); width: 100%; padding: 12px; }
+        .btn-finish:hover { background: #dee2e6; }
+
+        @media(max-width: 768px) { 
+            .container { flex-direction: column; } 
+            .courts, .waiting { flex-direction: column; } 
+            #bench { max-width: 100%; min-height: 300px; } 
+        }
+    </style>
+</head>
+<body>
+
+<div class="title-container">
+    <span class="turtle-icon">🐢</span>
+    <h1>龜蜜羽球隊</h1>
+</div>
+
+<div id="controls">
+    <input type="text" id="newPlayer" placeholder="球員姓名">
+    <select id="gender">
+        <option value="M">男</option>
+        <option value="F">女</option>
+    </select>
+    <button onclick="addPlayer()">新增球員</button>
+    <button id="deleteModeBtn">刪除模式</button>
+    <button onclick="resetAll()" style="background:#adb5bd; border-color:#adb5bd; color: black;">全部清空</button>
+</div>
+
+<div class="container">
+    <div class="area" id="bench">
+        <h3>休息區</h3>
+        <div class="player-zone" id="bench-zone"></div>
+    </div>
+
+    <div class="right-side">
+        <div class="courts">
+            <div class="area" id="court1">
+                <h3>3 號場</h3>
+                <div class="player-zone" id="court1-zone"></div>
+                <div class="area-controls"><button class="btn-finish" onclick="finishMatch('court1')">結束</button></div>
+            </div>
+            <div class="area" id="court2">
+                <h3>4 號場</h3>
+                <div class="player-zone" id="court2-zone"></div>
+                <div class="area-controls"><button class="btn-finish" onclick="finishMatch('court2')">結束</button></div>
+            </div>
+        </div>
+        <div class="waiting">
+            <div class="area" id="waitingA">
+                <h3>等待順位 1</h3>
+                <div class="player-zone" id="waitingA-zone"></div>
+            </div>
+            <div class="area" id="waitingB">
+                <h3>等待順位 2</h3>
+                <div class="player-zone" id="waitingB-zone"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+<script>
+    const areaIds = ['bench-zone', 'court1-zone', 'court2-zone', 'waitingA-zone', 'waitingB-zone'];
+    const maxPlayers = 4;
+    let deleteMode = false;
+
+    window.onload = () => {
+        const saved = JSON.parse(localStorage.getItem('turtleManualState') || '{}');
+        areaIds.forEach(id => {
+            const zone = document.getElementById(id);
+            if (zone) (saved[id] || []).forEach(p => createPlayerElement(p.name, p.gender, zone));
+        });
+        initSortable();
+    };
+
+    function saveState() {
+        const state = {};
+        areaIds.forEach(id => {
+            const zone = document.getElementById(id);
+            state[id] = [...zone.querySelectorAll('.player')].map(p => ({
+                name: p.dataset.name, gender: p.dataset.gender
+            }));
+        });
+        localStorage.setItem('turtleManualState', JSON.stringify(state));
+    }
+
+    function createPlayerElement(name, gender, zone) {
+        const div = document.createElement('div');
+        div.className = `player ${gender === 'M' ? 'male' : 'female'}`;
+        div.dataset.name = name;
+        div.dataset.gender = gender;
+        div.innerHTML = `<button class="delete-x" onclick="removePlayer(this)">✕</button><span>${name}</span>`;
+        zone.appendChild(div);
+    }
+
+    function addPlayer() {
+        const input = document.getElementById('newPlayer');
+        const name = input.value.trim();
+        const gender = document.getElementById('gender').value;
+        if (!name) return;
+        createPlayerElement(name, gender, document.getElementById('bench-zone'));
+        input.value = '';
+        saveState();
+    }
+
+    function removePlayer(btn) {
+        btn.parentElement.remove();
+        saveState();
+    }
+
+    function initSortable() {
+        areaIds.forEach(id => {
+            new Sortable(document.getElementById(id), {
+                group: 'players',
+                animation: 150,
+                onAdd: (e) => {
+                    // 根據限制：等待區與球場不能超過 4 人
+                    if (e.to.id !== 'bench-zone' && e.to.children.length > maxPlayers) {
+                        document.getElementById('bench-zone').appendChild(e.item);
+                        alert('限制 4 人喔！');
+                    }
+                    saveState();
+                },
+                onUpdate: saveState
+            });
+        });
+    }
+
+    document.getElementById('deleteModeBtn').onclick = function() {
+        deleteMode = !deleteMode;
+        this.classList.toggle('active', deleteMode);
+        document.querySelectorAll('.player').forEach(p => p.classList.toggle('delete-mode', deleteMode));
+    };
+
+    function finishMatch(courtId) {
+        const court = document.getElementById(courtId + '-zone');
+        const bench = document.getElementById('bench-zone');
+        
+        // 1. 球場的人回休息區
+        while (court.children.length > 0) bench.appendChild(court.children[0]);
+        
+        // 2. 自動遞補：等待 1 進球場，等待 2 進等待 1
+        const wA = document.getElementById('waitingA-zone');
+        const wB = document.getElementById('waitingB-zone');
+        
+        while (wA.children.length > 0 && court.children.length < maxPlayers) {
+            court.appendChild(wA.children[0]);
+        }
+        while (wB.children.length > 0 && wA.children.length < maxPlayers) {
+            wA.appendChild(wB.children[0]);
+        }
+        
+        saveState();
+    }
+
+    function resetAll() {
+        if (confirm('確定要清空所有資料嗎？')) {
+            areaIds.forEach(id => document.getElementById(id).innerHTML = '');
+            localStorage.removeItem('turtleManualState');
+        }
+    }
+</script>
+</body>
+</html>

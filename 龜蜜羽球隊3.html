@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>龜蜜羽球隊 - 四場四等正式版</title>
+    <style>
+        :root { 
+            --bg: #e9ecef; 
+            --accent: #212529; 
+            --secondary: #6c757d; 
+            --white: #ffffff; 
+            --male-border: #343a40; 
+            --female-border: #2d6a4f; 
+        }
+        * { box-sizing: border-box; }
+        body { 
+            font-family: 'PingFang TC', 'Heiti TC', sans-serif; 
+            margin: 0; padding: 10px; background: var(--bg); 
+            color: var(--accent); height: 100vh; overflow: hidden; 
+            display: flex; flex-direction: column;
+        }
+        .header-area {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 0 5px 10px 5px; flex-shrink: 0;
+        }
+        .title-container { display: flex; align-items: center; gap: 8px; }
+        .turtle-icon { font-size: 30px; }
+        h1 { font-size: 22px; font-weight: 800; margin: 0; }
+        
+        #controls { 
+            background: var(--white); padding: 8px 12px; border-radius: 10px; 
+            border: 2px solid var(--accent); display: flex; gap: 6px; align-items: center;
+        }
+        #newPlayer { padding: 6px; border: 2px solid var(--secondary); border-radius: 6px; width: 100px; font-weight: bold; }
+        select { padding: 6px; border-radius: 6px; border: 2px solid var(--secondary); font-weight: bold; }
+        
+        button { 
+            font-size: 14px; padding: 6px 12px; border: 2px solid var(--accent); 
+            border-radius: 8px; background: var(--accent); color: var(--white); 
+            cursor: pointer; font-weight: bold;
+        }
+        #deleteModeBtn.active { background: #c1121f !important; border-color: #c1121f !important; }
+
+        .main-content { display: flex; gap: 12px; flex: 1; min-height: 0; }
+        
+        /* 休息區固定寬度 */
+        #bench { 
+            flex: 0 0 160px; background: var(--white); border: 2.5px solid var(--accent);
+            border-radius: 12px; display: flex; flex-direction: column; min-height: 0;
+            box-shadow: 4px 4px 0px rgba(0,0,0,0.1);
+        }
+
+        .right-side { flex: 1; display: flex; flex-direction: column; gap: 10px; min-height: 0; }
+        
+        /* 四欄配置 */
+        .courts, .waiting { display: flex; gap: 8px; flex: 1; min-height: 0; }
+        
+        .area { 
+            flex: 1; background: var(--white); border: 2.5px solid var(--accent); 
+            border-radius: 12px; display: flex; flex-direction: column; min-height: 0;
+            box-shadow: 4px 4px 0px rgba(0,0,0,0.1);
+            width: 0; 
+        }
+        .area h3 { 
+            text-align: center; background: var(--accent); color: var(--white);
+            margin: 0; padding: 6px; border-radius: 9px 9px 0 0;
+            font-size: 13px; letter-spacing: 1px; flex-shrink: 0;
+        }
+        .player-zone { 
+            flex: 1; overflow-y: auto; padding: 6px; min-height: 0;
+            scrollbar-width: thin;
+        }
+        
+        /* 球員卡片樣式 */
+        .player { 
+            position: relative; padding: 10px 4px; margin-bottom: 6px; 
+            border-radius: 6px; font-weight: 900; text-align: center; 
+            cursor: grab; border: 2px solid var(--accent);
+            background: var(--white); font-size: 14px; user-select: none;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+        .player.male { border-left: 6px solid #343a40; }
+        .player.female { border-left: 6px solid #2d6a4f; }
+        
+        .player .delete-x { 
+            display: none; position: absolute; right: 4px; top: 50%; 
+            transform: translateY(-50%); color: #c1121f; border: none; 
+            background: #f8d7da; border-radius: 50%; width: 20px; height: 20px;
+            font-size: 12px; cursor: pointer; z-index: 10; line-height: 1;
+        }
+        .player.delete-mode .delete-x { display: block; }
+        
+        .area-controls { padding: 5px; flex-shrink: 0; }
+        .btn-finish { 
+            background: #f8f9fa; color: var(--accent); border: 1.5px solid var(--accent); 
+            width: 100%; padding: 6px; border-radius: 5px; cursor: pointer; 
+            font-weight: bold; font-size: 12px;
+        }
+        .btn-finish:active { background: #dee2e6; }
+
+        /* 拖動時的佔位效果 */
+        .sortable-ghost { opacity: 0.3; background: #adb5bd !important; }
+    </style>
+</head>
+<body>
+
+<div class="header-area">
+    <div class="title-container">
+        <span class="turtle-icon">🐢</span>
+        <h1>龜蜜羽球隊</h1>
+    </div>
+    <div id="controls">
+        <input type="text" id="newPlayer" placeholder="姓名" autocomplete="off">
+        <select id="gender">
+            <option value="M">男</option>
+            <option value="F">女</option>
+        </select>
+        <button onclick="addPlayer()">新增</button>
+        <button id="deleteModeBtn">刪除模式</button>
+        <button onclick="resetAll()" style="background:#adb5bd; border-color:#adb5bd; color: black;">清空</button>
+    </div>
+</div>
+
+<div class="main-content">
+    <div id="bench" class="area">
+        <h3>休息區</h3>
+        <div class="player-zone" id="bench-zone"></div>
+    </div>
+
+    <div class="right-side">
+        <div class="courts">
+            <div class="area" id="court1">
+                <h3>1 號場</h3>
+                <div class="player-zone" id="court1-zone"></div>
+                <div class="area-controls"><button class="btn-finish" onclick="finishMatch('court1-zone')">結束</button></div>
+            </div>
+            <div class="area" id="court2">
+                <h3>2 號場</h3>
+                <div class="player-zone" id="court2-zone"></div>
+                <div class="area-controls"><button class="btn-finish" onclick="finishMatch('court2-zone')">結束</button></div>
+            </div>
+            <div class="area" id="court3">
+                <h3>3 號場</h3>
+                <div class="player-zone" id="court3-zone"></div>
+                <div class="area-controls"><button class="btn-finish" onclick="finishMatch('court3-zone')">結束</button></div>
+            </div>
+            <div class="area" id="court4">
+                <h3>4 號場</h3>
+                <div class="player-zone" id="court4-zone"></div>
+                <div class="area-controls"><button class="btn-finish" onclick="finishMatch('court4-zone')">結束</button></div>
+            </div>
+        </div>
+
+        <div class="waiting">
+            <div class="area" id="waiting1">
+                <h3>等待 1</h3>
+                <div class="player-zone" id="waiting1-zone"></div>
+            </div>
+            <div class="area" id="waiting2">
+                <h3>等待 2</h3>
+                <div class="player-zone" id="waiting2-zone"></div>
+            </div>
+            <div class="area" id="waiting3">
+                <h3>等待 3</h3>
+                <div class="player-zone" id="waiting3-zone"></div>
+            </div>
+            <div class="area" id="waiting4">
+                <h3>等待 4</h3>
+                <div class="player-zone" id="waiting4-zone"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+<script>
+    const areaIds = [
+        'bench-zone', 
+        'court1-zone', 'court2-zone', 'court3-zone', 'court4-zone', 
+        'waiting1-zone', 'waiting2-zone', 'waiting3-zone', 'waiting4-zone'
+    ];
+    const maxPlayers = 4;
+    let deleteMode = false;
+
+    // 初始化與讀取緩存
+    window.onload = () => {
+        const saved = JSON.parse(localStorage.getItem('turtleManualState') || '{}');
+        areaIds.forEach(id => {
+            const zone = document.getElementById(id);
+            if (zone) (saved[id] || []).forEach(p => createPlayerElement(p.name, p.gender, zone));
+        });
+        initSortable();
+    };
+
+    function saveState() {
+        const state = {};
+        areaIds.forEach(id => {
+            const zone = document.getElementById(id);
+            state[id] = [...zone.querySelectorAll('.player')].map(p => ({
+                name: p.dataset.name, gender: p.dataset.gender
+            }));
+        });
+        localStorage.setItem('turtleManualState', JSON.stringify(state));
+    }
+
+    function createPlayerElement(name, gender, zone) {
+        const div = document.createElement('div');
+        div.className = `player ${gender === 'M' ? 'male' : 'female'}`;
+        div.dataset.name = name;
+        div.dataset.gender = gender;
+        if(deleteMode) div.classList.add('delete-mode');
+        div.innerHTML = `<button class="delete-x" onclick="removePlayer(this)">✕</button><span>${name}</span>`;
+        zone.appendChild(div);
+    }
+
+    function addPlayer() {
+        const input = document.getElementById('newPlayer');
+        const name = input.value.trim();
+        const gender = document.getElementById('gender').value;
+        if (!name) return;
+        createPlayerElement(name, gender, document.getElementById('bench-zone'));
+        input.value = '';
+        input.focus();
+        saveState();
+    }
+
+    function removePlayer(btn) {
+        btn.parentElement.remove();
+        saveState();
+    }
+
+    function initSortable() {
+        areaIds.forEach(id => {
+            new Sortable(document.getElementById(id), {
+                group: 'players',
+                animation: 150,
+                ghostClass: 'sortable-ghost',
+                onAdd: (e) => {
+                    if (e.to.id !== 'bench-zone' && e.to.children.length > maxPlayers) {
+                        document.getElementById('bench-zone').appendChild(e.item);
+                        alert('這區限制 4 人！');
+                    }
+                    saveState();
+                },
+                onUpdate: saveState
+            });
+        });
+    }
+
+    document.getElementById('deleteModeBtn').onclick = function() {
+        deleteMode = !deleteMode;
+        this.classList.toggle('active', deleteMode);
+        document.querySelectorAll('.player').forEach(p => p.classList.toggle('delete-mode', deleteMode));
+    };
+
+    // 正確的連鎖補位邏輯
+    function finishMatch(courtZoneId) {
+        const court = document.getElementById(courtZoneId);
+        const bench = document.getElementById('bench-zone');
+        
+        const w1 = document.getElementById('waiting1-zone');
+        const w2 = document.getElementById('waiting2-zone');
+        const w3 = document.getElementById('waiting3-zone');
+        const w4 = document.getElementById('waiting4-zone');
+
+        // 1. 球場回休息區
+        while (court.children.length > 0) {
+            bench.appendChild(court.children[0]);
+        }
+
+        // 2. 依序遞補 (從等待 1 開始補球場，再由後往前補位)
+        movePlayers(w1, court, maxPlayers);
+        movePlayers(w2, w1, maxPlayers);
+        movePlayers(w3, w2, maxPlayers);
+        movePlayers(w4, w3, maxPlayers);
+        
+        saveState();
+    }
+
+    function movePlayers(fromZone, toZone, limit) {
+        while (fromZone.children.length > 0 && toZone.children.length < limit) {
+            toZone.appendChild(fromZone.children[0]);
+        }
+    }
+
+    function resetAll() {
+        if (confirm('確定清空所有球員嗎？')) {
+            areaIds.forEach(id => {
+                const zone = document.getElementById(id);
+                if(zone) zone.innerHTML = '';
+            });
+            localStorage.removeItem('turtleManualState');
+        }
+    }
+
+    // 支援 Enter 鍵新增
+    document.getElementById('newPlayer').addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') addPlayer();
+    });
+</script>
+</body>
+</html>

@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>帥一成羽球館｜管理</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #eef2f7;
+    --surface: #ffffff;
+    --surface2: #f5f8fb;
+    --border: #dde4ed;
+    --shadow: 0 2px 8px rgba(30,50,80,0.07);
+
+    --accent: #2563eb;
+    --accent-light: #dbeafe;
+    --accent2: #ef4444;
+
+    --male: #eff6ff;
+    --male-border: #93c5fd;
+    --male-text: #1d4ed8;
+    --female: #fdf4ff;
+    --female-border: #e879f9;
+    --female-text: #a21caf;
+
+    --text: #1e293b;
+    --text2: #475569;
+    --muted: #94a3b8;
+
+    --court-bg: #f0fdf4;
+    --court-border: #6ee7b7;
+    --court-accent: #059669;
+
+    --wait-bg: #fff7ed;
+    --wait-border: #fdba74;
+    --wait-accent: #c2410c;
+
+    --bench-bg: #f8faff;
+    --bench-border: #c7d7f5;
+    --bench-accent: #3b5bdb;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Noto Sans TC', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    height: 100vh;
+    overflow: hidden;
+    display: grid;
+    /* Left sidebar + right content */
+    grid-template-columns: 160px 1fr;
+    grid-template-rows: auto 1fr;
+    gap: 0;
+  }
+
+  /* ══════════════════════════════
+     TOP BAR (full width)
+  ══════════════════════════════ */
+  .topbar {
+    grid-column: 1 / -1;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 0 14px;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    flex-shrink: 0;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+  }
+  .brand { font-size: 1rem; font-weight: 900; color: var(--text); white-space: nowrap; }
+  .brand em { color: var(--accent); font-style: normal; }
+
+  /* Add-player controls in top bar */
+  .add-controls {
+    display: flex; gap: 6px; align-items: center; flex: 1; max-width: 480px;
+  }
+  .add-controls input {
+    flex: 1; min-width: 0;
+    background: var(--surface2);
+    border: 1.5px solid var(--border);
+    color: var(--text); border-radius: 8px;
+    padding: 6px 10px; font-size: 14px;
+    font-family: inherit; outline: none;
+    transition: border-color 0.2s;
+  }
+  .add-controls input:focus { border-color: var(--accent); }
+  .add-controls input::placeholder { color: var(--muted); }
+  .add-controls select {
+    background: var(--surface2); border: 1.5px solid var(--border);
+    color: var(--text); border-radius: 8px;
+    padding: 6px 8px; font-size: 13px;
+    font-family: inherit; outline: none; cursor: pointer;
+  }
+  .btn {
+    border: none; border-radius: 8px;
+    padding: 6px 12px; font-size: 13px; font-weight: 700;
+    cursor: pointer; font-family: inherit;
+    transition: all 0.15s; white-space: nowrap; flex-shrink: 0;
+  }
+  .btn-add { background: var(--accent); color: #fff; }
+  .btn-add:hover { background: #1d4ed8; }
+  .btn-del { background: #fef2f2; color: var(--accent2); border: 1.5px solid #fecaca; }
+  .btn-del.active { background: var(--accent2); color: #fff; border-color: var(--accent2); }
+
+  .display-link {
+    font-size: 11px; font-weight: 700; color: var(--accent);
+    background: var(--accent-light); border: 1px solid #bfdbfe;
+    border-radius: 8px; padding: 5px 11px; text-decoration: none;
+    white-space: nowrap; flex-shrink: 0;
+  }
+
+  /* ══════════════════════════════
+     LEFT — BENCH COLUMN
+  ══════════════════════════════ */
+  .bench-col {
+    background: var(--bench-bg);
+    border-right: 1.5px solid var(--bench-border);
+    display: flex; flex-direction: column;
+    padding: 10px 8px;
+    gap: 8px;
+    overflow: hidden;
+  }
+  .col-label {
+    font-size: 9.5px; font-weight: 800; letter-spacing: 0.16em;
+    text-transform: uppercase; color: var(--bench-accent);
+    display: flex; align-items: center; gap: 5px; flex-shrink: 0;
+  }
+  .col-label .cnt {
+    margin-left: auto; font-size: 10px;
+    background: #dbe4ff; border-radius: 8px;
+    padding: 1px 7px; color: var(--bench-accent); font-weight: 700;
+  }
+
+  /* bench drop zone */
+  .bench-list {
+    flex: 1; min-height: 0;
+    overflow-y: auto;
+    display: flex; flex-direction: column; gap: 4px;
+    padding: 2px 0;
+  }
+
+  /* ══════════════════════════════
+     RIGHT — COURTS + WAITING
+  ══════════════════════════════ */
+  .right-col {
+    display: grid;
+    grid-template-rows: 1fr 1fr;
+    gap: 0;
+    overflow: hidden;
+    padding: 10px 10px 10px 10px;
+    gap: 10px;
+  }
+
+  /* section = courts or waiting */
+  .section { display: flex; flex-direction: column; gap: 6px; min-height: 0; }
+  .section-label {
+    font-size: 9.5px; font-weight: 800; letter-spacing: 0.16em;
+    text-transform: uppercase; color: var(--muted);
+    flex-shrink: 0; padding-left: 2px;
+  }
+  .section-label.green { color: var(--court-accent); }
+  .section-label.orange { color: var(--wait-accent); }
+
+  .four-col {
+    display: grid; grid-template-columns: repeat(4, 1fr);
+    gap: 8px; flex: 1; min-height: 0;
+  }
+
+  /* ══════════════════════════════
+     ZONE CARD
+  ══════════════════════════════ */
+  .zone {
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: 12px; padding: 9px;
+    display: flex; flex-direction: column;
+    box-shadow: var(--shadow);
+    min-height: 0;
+    transition: box-shadow 0.2s;
+  }
+  .zone:hover { box-shadow: 0 4px 16px rgba(30,50,80,0.1); }
+  .zone.court { background: var(--court-bg); border-color: var(--court-border); }
+  .zone.wait  { background: var(--wait-bg);  border-color: var(--wait-border); }
+
+  .zone-header {
+    display: flex; align-items: center; gap: 5px;
+    margin-bottom: 6px; flex-shrink: 0;
+  }
+  .zone-name {
+    font-size: 11px; font-weight: 800; letter-spacing: 0.06em;
+    color: var(--text2); flex: 1;
+  }
+  .zone.court .zone-name { color: var(--court-accent); }
+  .zone.wait  .zone-name { color: var(--wait-accent); }
+  .zone-badge {
+    font-size: 10px; font-weight: 700; border-radius: 9px;
+    padding: 1px 7px; border: 1px solid;
+  }
+  .zone.court .zone-badge { background: #d1fae5; border-color: var(--court-border); color: var(--court-accent); }
+  .zone.wait  .zone-badge { background: #ffedd5; border-color: var(--wait-border);  color: var(--wait-accent); }
+  .zone:not(.court):not(.wait) .zone-badge {
+    background: var(--surface2); border-color: var(--border); color: var(--muted);
+  }
+
+  .player-list {
+    flex: 1; min-height: 20px;
+    display: flex; flex-direction: column; gap: 4px;
+    overflow-y: auto;
+  }
+
+  /* Divider under court name → visual tie to wait zone below */
+  .court-to-wait {
+    margin-top: 4px; height: 2px; border-radius: 1px;
+    background: linear-gradient(90deg, var(--court-border), transparent);
+  }
+
+  /* ══════════════════════════════
+     END BUTTON
+  ══════════════════════════════ */
+  .end-btn {
+    margin-top: 6px; flex-shrink: 0;
+    width: 100%; background: transparent;
+    color: var(--court-accent); border: 1.5px solid var(--court-border);
+    border-radius: 7px; padding: 5px;
+    font-size: 11px; font-weight: 800;
+    font-family: inherit; cursor: pointer;
+    letter-spacing: 0.05em; transition: all 0.18s;
+  }
+  .end-btn:hover { background: #d1fae5; border-color: var(--court-accent); }
+  .end-btn:active { transform: scale(0.97); }
+
+  /* ══════════════════════════════
+     PLAYER CHIP
+  ══════════════════════════════ */
+  .player {
+    border-radius: 8px; padding: 6px 10px;
+    font-size: 13px; font-weight: 700;
+    cursor: grab; user-select: none;
+    display: flex; align-items: center; justify-content: space-between;
+    border: 1.5px solid transparent;
+    transition: transform 0.1s, box-shadow 0.1s;
+    flex-shrink: 0;
+  }
+  .player.male   { background: var(--male);   border-color: var(--male-border);   color: var(--male-text); }
+  .player.female { background: var(--female); border-color: var(--female-border); color: var(--female-text); }
+  .player:active { cursor: grabbing; transform: scale(0.96); box-shadow: 0 6px 18px rgba(0,0,0,0.13); }
+  .player .gtag  { font-size: 9px; opacity: 0.5; font-weight: 500; }
+
+  .player.delete-mode { cursor: pointer; }
+  .player.delete-mode:hover {
+    background: #fee2e2 !important;
+    border-color: var(--accent2) !important;
+    color: var(--accent2) !important;
+  }
+
+  /* SortableJS */
+  .sortable-ghost  { opacity: 0.15 !important; }
+  .sortable-chosen {
+    box-shadow: 0 8px 24px rgba(37,99,235,0.22) !important;
+    transform: scale(1.04) !important;
+    z-index: 9999;
+  }
+
+  /* Scrollbars */
+  ::-webkit-scrollbar { width: 3px; height: 3px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+</style>
+</head>
+<body>
+
+<!-- ── TOP BAR ── -->
+<div class="topbar">
+  <div class="brand">🏸 帥一成 <em>管理台</em></div>
+  <div class="add-controls">
+    <input type="text" id="playerName" placeholder="輸入球員姓名" maxlength="6">
+    <select id="playerGender">
+      <option value="M">男 ♂</option>
+      <option value="F">女 ♀</option>
+    </select>
+    <button class="btn btn-add" onclick="addPlayer()">＋ 新增</button>
+    <button class="btn btn-del" onclick="toggleDeleteMode()" id="delBtn">🗑 刪除</button>
+  </div>
+  <a class="display-link" href="display.html" target="_blank">📺 大螢幕 →</a>
+</div>
+
+<!-- ── LEFT: BENCH ── -->
+<div class="bench-col">
+  <div class="col-label">
+    ⏸ 休息區
+    <span class="cnt" id="cnt-bench">0</span>
+  </div>
+  <div class="bench-list" id="bench"></div>
+</div>
+
+<!-- ── RIGHT: COURTS + WAIT ── -->
+<div class="right-col">
+
+  <!-- 上場區 -->
+  <div class="section">
+    <div class="section-label green">🟢 上場區</div>
+    <div class="four-col">
+      <div class="zone court">
+        <div class="zone-header">
+          <span class="zone-name">1 號場</span>
+          <span class="zone-badge" id="cnt-court1">0</span>
+        </div>
+        <div class="player-list" id="court1"></div>
+        <button class="end-btn" onclick="clearCourt('court1','waitA')">▶ 結束比賽</button>
+      </div>
+      <div class="zone court">
+        <div class="zone-header">
+          <span class="zone-name">2 號場</span>
+          <span class="zone-badge" id="cnt-court2">0</span>
+        </div>
+        <div class="player-list" id="court2"></div>
+        <button class="end-btn" onclick="clearCourt('court2','waitB')">▶ 結束比賽</button>
+      </div>
+      <div class="zone court">
+        <div class="zone-header">
+          <span class="zone-name">3 號場</span>
+          <span class="zone-badge" id="cnt-court3">0</span>
+        </div>
+        <div class="player-list" id="court3"></div>
+        <button class="end-btn" onclick="clearCourt('court3','waitC')">▶ 結束比賽</button>
+      </div>
+      <div class="zone court">
+        <div class="zone-header">
+          <span class="zone-name">4 號場</span>
+          <span class="zone-badge" id="cnt-court4">0</span>
+        </div>
+        <div class="player-list" id="court4"></div>
+        <button class="end-btn" onclick="clearCourt('court4','waitD')">▶ 結束比賽</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 等待區 -->
+  <div class="section">
+    <div class="section-label orange">⏳ 等待區</div>
+    <div class="four-col">
+      <div class="zone wait">
+        <div class="zone-header">
+          <span class="zone-name">等待 A</span>
+          <span class="zone-badge" id="cnt-waitA">0</span>
+        </div>
+        <div class="player-list" id="waitA"></div>
+      </div>
+      <div class="zone wait">
+        <div class="zone-header">
+          <span class="zone-name">等待 B</span>
+          <span class="zone-badge" id="cnt-waitB">0</span>
+        </div>
+        <div class="player-list" id="waitB"></div>
+      </div>
+      <div class="zone wait">
+        <div class="zone-header">
+          <span class="zone-name">等待 C</span>
+          <span class="zone-badge" id="cnt-waitC">0</span>
+        </div>
+        <div class="player-list" id="waitC"></div>
+      </div>
+      <div class="zone wait">
+        <div class="zone-header">
+          <span class="zone-name">等待 D</span>
+          <span class="zone-badge" id="cnt-waitD">0</span>
+        </div>
+        <div class="player-list" id="waitD"></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ── SCRIPT ── -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+  import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+  import Sortable from "https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/+esm";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyA-n5j37dvvgvdmosJNg622XAXZp5WovW8",
+    authDomain: "havix-for-customers.firebaseapp.com",
+    projectId: "havix-for-customers",
+    databaseURL: "https://havix-for-customers-default-rtdb.firebaseio.com",
+    storageBucket: "havix-for-customers.firebasestorage.app",
+    messagingSenderId: "876660373844",
+    appId: "1:876660373844:web:fb1358967daf203589b0c1"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getDatabase(app);
+
+  const zones = ['bench','court1','court2','court3','court4','waitA','waitB','waitC','waitD'];
+  const courtZones = new Set(['court1','court2','court3','court4']);
+  let isLocalMoving = false;
+  let isDeleteMode = false;
+
+  function makePlayerEl(p) {
+    const div = document.createElement('div');
+    div.className = `player ${p.g === 'M' ? 'male' : 'female'}`;
+    div.dataset.n = p.n; div.dataset.g = p.g;
+    div.innerHTML = `<span>${p.n}</span><span class="gtag">${p.g === 'M' ? '♂' : '♀'}</span>`;
+    div.onclick = () => { if (isDeleteMode) { div.remove(); updateCounts(); sync(); } };
+    return div;
+  }
+
+  function updateCounts() {
+    zones.forEach(id => {
+      const el = document.getElementById(id);
+      const badge = document.getElementById('cnt-' + id);
+      if (el && badge) badge.textContent = el.children.length;
+    });
+  }
+
+  onValue(ref(db, 'simple_queue'), (snap) => {
+    if (isLocalMoving) return;
+    const data = snap.val() || {};
+    zones.forEach(id => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.innerHTML = '';
+      (data[id] || []).forEach(p => el.appendChild(makePlayerEl(p)));
+    });
+    updateCounts();
+  });
+
+  zones.forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    Sortable.create(el, {
+      group: 'players', animation: 150,
+      ghostClass: 'sortable-ghost', chosenClass: 'sortable-chosen',
+      onStart: () => { isLocalMoving = true; },
+      onMove: (evt) => {
+        if (courtZones.has(evt.to.id) && evt.to.children.length >= 4) return false;
+      },
+      onEnd: () => { isLocalMoving = false; updateCounts(); sync(); }
+    });
+  });
+
+  function sync() {
+    const updates = {};
+    zones.forEach(id => {
+      const el = document.getElementById(id);
+      updates[id] = el
+        ? [...el.querySelectorAll('.player')].map(p => ({ n: p.dataset.n, g: p.dataset.g }))
+        : [];
+    });
+    set(ref(db, 'simple_queue'), updates);
+  }
+
+  window.addPlayer = function() {
+    const name = document.getElementById('playerName').value.trim();
+    if (!name) return;
+    const gender = document.getElementById('playerGender').value;
+    document.getElementById('bench').appendChild(makePlayerEl({ n: name, g: gender }));
+    document.getElementById('playerName').value = '';
+    document.getElementById('playerName').focus();
+    updateCounts(); sync();
+  };
+
+  document.getElementById('playerName').addEventListener('keydown', e => {
+    if (e.key === 'Enter') window.addPlayer();
+  });
+
+  window.toggleDeleteMode = function() {
+    isDeleteMode = !isDeleteMode;
+    const btn = document.getElementById('delBtn');
+    btn.classList.toggle('active', isDeleteMode);
+    btn.textContent = isDeleteMode ? '🛑 停止' : '🗑 刪除';
+    document.querySelectorAll('.player').forEach(p => p.classList.toggle('delete-mode', isDeleteMode));
+  };
+
+  window.clearCourt = function(courtId, waitId) {
+    const court = document.getElementById(courtId);
+    const bench = document.getElementById('bench');
+    const wait  = document.getElementById(waitId);
+    // 下場回休息區
+    while (court.firstChild) bench.appendChild(court.firstChild);
+    // 等待前 4 人上場
+    const waiters = Array.from(wait.children);
+    for (let i = 0; i < Math.min(waiters.length, 4); i++) court.appendChild(waiters[i]);
+    updateCounts(); sync();
+  };
+</script>
+</body>
+</html>

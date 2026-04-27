@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>帥一成羽球館｜場地顯示</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&family=DM+Sans:wght@400;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f8fafc;
+    --surface: #ffffff;
+    --border: #e2e8f0;
+    --court-top: #1e3a5f;
+    --court-line: #2563eb;
+    --male-bg: #eff6ff;
+    --male-border: #bfdbfe;
+    --male-text: #1e40af;
+    --female-bg: #fdf4ff;
+    --female-border: #e9d5ff;
+    --female-text: #7e22ce;
+    --text: #0f172a;
+    --muted: #64748b;
+    --empty: #f1f5f9;
+    --empty-text: #cbd5e1;
+    --green: #16a34a;
+    --green-bg: #dcfce7;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Noto Sans TC', 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    padding: 28px 32px 20px;
+    gap: 24px;
+  }
+
+  /* HEADER */
+  .header {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    border-bottom: 2px solid var(--border);
+    padding-bottom: 16px;
+  }
+  .header-left { display: flex; align-items: baseline; gap: 12px; }
+  .logo {
+    font-size: 2.2rem;
+    font-weight: 900;
+    color: var(--text);
+    letter-spacing: -0.02em;
+    font-family: 'DM Sans', sans-serif;
+  }
+  .logo em { color: var(--court-line); font-style: normal; }
+  .subtitle {
+    font-size: 0.85rem;
+    color: var(--muted);
+    font-weight: 500;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+  .live-badge {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: var(--green);
+    background: var(--green-bg);
+    border: 1px solid #86efac;
+    border-radius: 20px;
+    padding: 5px 14px;
+    letter-spacing: 0.08em;
+  }
+  .live-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--green);
+    animation: pulse 1.6s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.4; transform: scale(0.7); }
+  }
+
+  /* COURTS GRID */
+  .courts-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 20px;
+    flex: 1;
+  }
+
+  /* COURT CARD */
+  .court-card {
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: 18px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+    transition: box-shadow 0.3s;
+  }
+  .court-card.active {
+    border-color: #93c5fd;
+    box-shadow: 0 4px 24px rgba(37,99,235,0.12);
+  }
+
+  /* COURT HEADER */
+  .court-header {
+    background: var(--court-top);
+    padding: 16px 20px;
+    position: relative;
+    overflow: hidden;
+  }
+  .court-header::after {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--court-line), #60a5fa);
+  }
+  .court-number {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: #94a3b8;
+    margin-bottom: 2px;
+  }
+  .court-name {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: #ffffff;
+    letter-spacing: -0.01em;
+  }
+  .court-status {
+    position: absolute;
+    top: 14px; right: 16px;
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    padding: 3px 9px;
+    border-radius: 20px;
+    border: 1px solid;
+  }
+  .court-status.playing {
+    color: #4ade80;
+    border-color: rgba(74,222,128,0.5);
+    background: rgba(74,222,128,0.1);
+  }
+  .court-status.empty {
+    color: #64748b;
+    border-color: rgba(100,116,139,0.3);
+    background: rgba(100,116,139,0.08);
+  }
+
+  /* COURT BODY */
+  .court-body {
+    flex: 1;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  /* TEAM DIVIDER */
+  .team-label {
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--muted);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .team-label::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+  .vs-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 4px 0;
+  }
+  .vs-line { flex: 1; height: 1px; background: var(--border); }
+  .vs-text {
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: 0.15em;
+    color: var(--muted);
+    padding: 3px 8px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+  }
+
+  /* PLAYER CHIPS */
+  .players-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .player-chip {
+    border-radius: 9px;
+    padding: 10px 14px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    transition: transform 0.2s;
+    animation: fadeIn 0.35s ease;
+  }
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .player-chip.male {
+    background: var(--male-bg);
+    border: 1.5px solid var(--male-border);
+  }
+  .player-chip.female {
+    background: var(--female-bg);
+    border: 1.5px solid var(--female-border);
+  }
+  .chip-name {
+    font-size: 1.1rem;
+    font-weight: 800;
+    letter-spacing: 0.02em;
+  }
+  .chip-name.male { color: var(--male-text); }
+  .chip-name.female { color: var(--female-text); }
+  .chip-icon { font-size: 1rem; opacity: 0.7; }
+
+  /* EMPTY SLOT */
+  .empty-slot {
+    border-radius: 9px;
+    padding: 10px 14px;
+    background: var(--empty);
+    border: 1.5px dashed #e2e8f0;
+    color: var(--empty-text);
+    font-size: 0.8rem;
+    font-weight: 500;
+    text-align: center;
+    letter-spacing: 0.05em;
+  }
+
+  /* EMPTY COURT */
+  .empty-court {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    color: var(--empty-text);
+    padding: 20px;
+    text-align: center;
+  }
+  .empty-court .icon { font-size: 2.5rem; opacity: 0.4; }
+  .empty-court .text { font-size: 0.85rem; font-weight: 600; letter-spacing: 0.05em; }
+
+  /* FOOTER */
+  .footer {
+    text-align: center;
+    font-size: 0.7rem;
+    color: var(--muted);
+    letter-spacing: 0.08em;
+    padding-top: 4px;
+  }
+
+  /* SCROLLBAR */
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-left">
+    <div class="logo">🏸 帥一成<em>羽球館</em></div>
+    <div class="subtitle">Court Display</div>
+  </div>
+  <div class="live-badge"><div class="live-dot"></div>LIVE</div>
+</div>
+
+<div class="courts-grid" id="courtsGrid"></div>
+
+<div class="footer" id="clockEl"></div>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+  import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyA-n5j37dvvgvdmosJNg622XAXZp5WovW8",
+    authDomain: "havix-for-customers.firebaseapp.com",
+    projectId: "havix-for-customers",
+    databaseURL: "https://havix-for-customers-default-rtdb.firebaseio.com",
+    storageBucket: "havix-for-customers.firebasestorage.app",
+    messagingSenderId: "876660373844",
+    appId: "1:876660373844:web:fb1358967daf203589b0c1"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getDatabase(app);
+
+  const courtIds = ['court1','court2','court3','court4'];
+  const courtNames = ['1 號場','2 號場','3 號場','4 號場'];
+
+  function renderCourt(container, name, number, players) {
+    const isPlaying = players.length > 0;
+    container.innerHTML = '';
+    container.className = 'court-card' + (isPlaying ? ' active' : '');
+
+    // Header
+    const hdr = document.createElement('div');
+    hdr.className = 'court-header';
+    hdr.innerHTML = `
+      <div class="court-number">Court ${number}</div>
+      <div class="court-name">${name}</div>
+      <div class="court-status ${isPlaying ? 'playing' : 'empty'}">${isPlaying ? '▶ 比賽中' : '空場'}</div>
+    `;
+    container.appendChild(hdr);
+
+    const body = document.createElement('div');
+    body.className = 'court-body';
+
+    if (!isPlaying) {
+      body.innerHTML = `<div class="empty-court"><div class="icon">🏸</div><div class="text">空場待機</div></div>`;
+    } else {
+      // Split into two teams (first 2 vs last 2)
+      const team1 = players.slice(0, 2);
+      const team2 = players.slice(2, 4);
+
+      const g1 = document.createElement('div');
+      g1.className = 'players-group';
+      team1.forEach(p => g1.appendChild(makeChip(p)));
+      // Pad to 2
+      for (let i = team1.length; i < 2; i++) {
+        const s = document.createElement('div'); s.className = 'empty-slot'; s.textContent = '— 空位 —';
+        g1.appendChild(s);
+      }
+
+      const vs = document.createElement('div');
+      vs.className = 'vs-row';
+      vs.innerHTML = `<div class="vs-line"></div><div class="vs-text">VS</div><div class="vs-line"></div>`;
+
+      const g2 = document.createElement('div');
+      g2.className = 'players-group';
+      team2.forEach(p => g2.appendChild(makeChip(p)));
+      for (let i = team2.length; i < 2; i++) {
+        const s = document.createElement('div'); s.className = 'empty-slot'; s.textContent = '— 空位 —';
+        g2.appendChild(s);
+      }
+
+      body.appendChild(g1);
+      body.appendChild(vs);
+      body.appendChild(g2);
+    }
+
+    container.appendChild(body);
+  }
+
+  function makeChip(p) {
+    const cls = p.g === 'M' ? 'male' : 'female';
+    const icon = p.g === 'M' ? '♂' : '♀';
+    const div = document.createElement('div');
+    div.className = `player-chip ${cls}`;
+    div.innerHTML = `<span class="chip-name ${cls}">${p.n}</span><span class="chip-icon">${icon}</span>`;
+    return div;
+  }
+
+  // Build court containers
+  const grid = document.getElementById('courtsGrid');
+  const courtEls = {};
+  courtIds.forEach((id, i) => {
+    const el = document.createElement('div');
+    el.className = 'court-card';
+    el.id = 'display-' + id;
+    grid.appendChild(el);
+    courtEls[id] = el;
+    renderCourt(el, courtNames[i], i + 1, []);
+  });
+
+  // Listen to Firebase
+  onValue(ref(db, 'simple_queue'), (snap) => {
+    const data = snap.val() || {};
+    courtIds.forEach((id, i) => {
+      renderCourt(courtEls[id], courtNames[i], i + 1, data[id] || []);
+    });
+  });
+
+  // Clock
+  function updateClock() {
+    const now = new Date();
+    document.getElementById('clockEl').textContent =
+      now.toLocaleDateString('zh-TW', { weekday:'long', year:'numeric', month:'long', day:'numeric' }) +
+      '　' + now.toLocaleTimeString('zh-TW', { hour:'2-digit', minute:'2-digit' });
+  }
+  updateClock();
+  setInterval(updateClock, 30000);
+</script>
+</body>
+</html>

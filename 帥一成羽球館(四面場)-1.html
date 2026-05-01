@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>帥一成羽球館｜場上大螢幕</title>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700;900&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #020617;
+      --surface: #1e293b;
+      --border: #334155;
+      --male: #1e3a8a;
+      --male-border: #3b82f6;
+      --male-text: #bfdbfe;
+      --female: #831843;
+      --female-border: #f472b6;
+      --female-text: #fbcfe8;
+      --court-bg: #064e3b;
+      --court-border: #10b981;
+      --court-accent: #34d399;
+      --text: #f8fafc;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Noto Sans TC', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      padding: 24px;
+      overflow: hidden;
+    }
+
+    /* ── HEADER ── */
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 24px;
+      padding: 0 10px;
+    }
+    .brand {
+      font-size: 2.5rem;
+      font-weight: 900;
+      letter-spacing: 0.1em;
+    }
+    .brand em { color: #60a5fa; font-style: normal; }
+    .clock {
+      font-size: 2.2rem;
+      font-weight: 700;
+      color: #94a3b8;
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* ── MAIN AREA ── */
+    .main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .section-label {
+      font-size: 1.2rem;
+      font-weight: 800;
+      letter-spacing: 0.3em;
+      text-transform: uppercase;
+      color: var(--court-accent);
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .four-col {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 20px;
+      flex: 1;
+    }
+
+    /* ── COURT CARD ── */
+    .zone {
+      border-radius: 24px;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      background: var(--court-bg);
+      border: 3px solid var(--court-border);
+      box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5);
+    }
+
+    .zone-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 2px solid rgba(255,255,255,0.1);
+      padding-bottom: 12px;
+    }
+
+    .zone-name {
+      font-size: 2.2rem;
+      font-weight: 900;
+      color: var(--court-accent);
+    }
+
+    .zone-badge {
+      font-size: 1.4rem;
+      font-weight: 800;
+      background: rgba(0,0,0,0.3);
+      padding: 4px 16px;
+      border-radius: 12px;
+      border: 1.5px solid var(--court-border);
+      color: var(--court-accent);
+    }
+
+    .player-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      flex: 1;
+    }
+
+    /* ── PLAYER CHIP ── */
+    .player {
+      border-radius: 16px;
+      padding: 20px 24px;
+      font-size: 2rem; /* 增大姓名顯示 */
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border: 2px solid transparent;
+      transition: all 0.3s ease;
+    }
+
+    .player.male {
+      background: linear-gradient(135deg, var(--male) 0%, #1e40af 100%);
+      border-color: var(--male-border);
+      color: var(--male-text);
+    }
+
+    .player.female {
+      background: linear-gradient(135deg, var(--female) 0%, #9d174d 100%);
+      border-color: var(--female-border);
+      color: var(--female-text);
+    }
+
+    .player .gtag {
+      font-size: 1.2rem;
+      opacity: 0.6;
+      background: rgba(0,0,0,0.2);
+      padding: 2px 8px;
+      border-radius: 8px;
+    }
+
+    /* 閃爍動畫：當場地人數不足 4 人時（可選功能） */
+    .zone.empty {
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+      0% { box-shadow: 0 0 0 0px rgba(16, 185, 129, 0.4); }
+      70% { box-shadow: 0 0 0 20px rgba(16, 185, 129, 0); }
+      100% { box-shadow: 0 0 0 0px rgba(16, 185, 129, 0); }
+    }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <div class="brand">🏸 帥一成 <em>羽球館</em></div>
+  <div class="clock" id="clock">--:--:--</div>
+</div>
+
+<div class="main">
+  <div class="section-label">🟢 ON COURT｜場上名單</div>
+  <div class="four-col">
+    <!-- Court 1 -->
+    <div class="zone" id="zone-court1">
+      <div class="zone-header">
+        <span class="zone-name">1 號場</span>
+        <span class="zone-badge" id="cnt-court1">0</span>
+      </div>
+      <div class="player-list" id="court1"></div>
+    </div>
+    <!-- Court 2 -->
+    <div class="zone" id="zone-court2">
+      <div class="zone-header">
+        <span class="zone-name">2 號場</span>
+        <span class="zone-badge" id="cnt-court2">0</span>
+      </div>
+      <div class="player-list" id="court2"></div>
+    </div>
+    <!-- Court 3 -->
+    <div class="zone" id="zone-court3">
+      <div class="zone-header">
+        <span class="zone-name">3 號場</span>
+        <span class="zone-badge" id="cnt-court3">0</span>
+      </div>
+      <div class="player-list" id="court3"></div>
+    </div>
+    <!-- Court 4 -->
+    <div class="zone" id="zone-court4">
+      <div class="zone-header">
+        <span class="zone-name">4 號場</span>
+        <span class="zone-badge" id="cnt-court4">0</span>
+      </div>
+      <div class="player-list" id="court4"></div>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+  import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyA-n5j37dvvgvdmosJNg622XAXZp5WovW8",
+    authDomain: "havix-for-customers.firebaseapp.com",
+    projectId: "havix-for-customers",
+    databaseURL: "https://havix-for-customers-default-rtdb.firebaseio.com",
+    storageBucket: "havix-for-customers.firebasestorage.app",
+    messagingSenderId: "876660373844",
+    appId: "1:876660373844:web:fb1358967daf203589b0c1"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getDatabase(app);
+
+  const courtIds = ['court1', 'court2', 'court3', 'court4'];
+
+  function makePlayerEl(p) {
+    const div = document.createElement('div');
+    div.className = `player ${p.g === 'M' ? 'male' : 'female'}`;
+    div.innerHTML = `<span>${p.n}</span><span class="gtag">${p.g === 'M' ? 'M' : 'F'}</span>`;
+    return div;
+  }
+
+  onValue(ref(db, 'simple_queue'), (snap) => {
+    const data = snap.val() || {};
+    courtIds.forEach(id => {
+      const el = document.getElementById(id);
+      const badge = document.getElementById('cnt-' + id);
+      const zone = document.getElementById('zone-' + id);
+      
+      if (!el) return;
+      el.innerHTML = '';
+      
+      const players = data[id] || [];
+      players.forEach(p => el.appendChild(makePlayerEl(p)));
+      
+      if (badge) badge.textContent = players.length;
+      
+      // 人數不足 4 人時，給予輕微提示 (可視需求開啟)
+      if (players.length > 0 && players.length < 4) {
+        zone.classList.add('empty');
+      } else {
+        zone.classList.remove('empty');
+      }
+    });
+  });
+
+  // 時鐘
+  function tick() {
+    const now = new Date();
+    document.getElementById('clock').textContent =
+      now.toLocaleTimeString('zh-TW', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  }
+  tick();
+  setInterval(tick, 1000);
+
+  // 點擊全螢幕
+  document.body.addEventListener('click', () => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen();
+    }
+  });
+</script>
+
+</body>
+</html>

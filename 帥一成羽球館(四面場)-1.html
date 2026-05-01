@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>帥一成羽球館｜場上大螢幕</title>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@900&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #020617;
+      --male-bg: linear-gradient(135deg, #1e3a8a 0%, #1d4ed8 100%);
+      --female-bg: linear-gradient(135deg, #831843 0%, #be185d 100%);
+      --court-bg: #064e3b;
+      --court-border: #10b981;
+      --text: #ffffff;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100vh; width: 100vw; overflow: hidden; background: var(--bg); color: var(--text); }
+    body { font-family: 'Noto Sans TC', sans-serif; display: flex; flex-direction: column; padding: 0.5vh 1vw; }
+
+    /* 頂部列 */
+    .header { display: flex; align-items: center; justify-content: space-between; height: 6vh; }
+    .brand { font-size: 3vh; font-weight: 900; color: #60a5fa; }
+    .clock { font-size: 3.5vh; font-weight: 700; color: #94a3b8; font-variant-numeric: tabular-nums; }
+
+    /* 主容器 */
+    .main { flex: 1; display: grid; grid-template-columns: repeat(4, 1fr); gap: 1vw; padding-bottom: 1vh; }
+
+    /* 場地 */
+    .zone { border-radius: 12px; padding: 0.8vh; display: flex; flex-direction: column; background: var(--court-bg); border: 4px solid var(--court-border); }
+    .zone-header { display: flex; align-items: center; justify-content: space-between; height: 5vh; border-bottom: 2px solid rgba(255,255,255,0.1); margin-bottom: 0.5vh; }
+    .zone-name { font-size: 3.5vh; font-weight: 900; color: #34d399; }
+    .zone-badge { font-size: 2.5vh; font-weight: 900; background: rgba(0,0,0,0.3); padding: 0 10px; border-radius: 4px; }
+
+    .player-list { flex: 1; display: flex; flex-direction: column; gap: 0.8vh; }
+
+    /* 極大字體 10vh */
+    .player { 
+      flex: 1; 
+      border-radius: 10px; 
+      font-size: 10vh; 
+      font-weight: 900; 
+      display: flex; 
+      align-items: center; 
+      justify-content: center;
+      line-height: 1;
+      text-shadow: 0 4px 10px rgba(0,0,0,0.8);
+    }
+    .player.male { background: var(--male-bg); border: 2px solid #3b82f6; }
+    .player.female { background: var(--female-bg); border: 2px solid #f472b6; }
+
+    /* 狀態提示 */
+    #status { position: fixed; bottom: 10px; left: 10px; font-size: 1.2vh; color: rgba(255,255,255,0.3); z-index: 100; }
+  </style>
+</head>
+<body>
+
+<div id="status">系統初始化中...</div>
+
+<div class="header">
+  <div class="brand">帥一成羽球館</div>
+  <div class="clock" id="clock">00:00:00</div>
+</div>
+
+<div class="main">
+  <div class="zone" id="zone-court1"><div class="zone-header"><span class="zone-name">1 號場</span><span class="zone-badge" id="cnt-court1">0</span></div><div class="player-list" id="court1"></div></div>
+  <div class="zone" id="zone-court2"><div class="zone-header"><span class="zone-name">2 號場</span><span class="zone-badge" id="cnt-court2">0</span></div><div class="player-list" id="court2"></div></div>
+  <div class="zone" id="zone-court3"><div class="zone-header"><span class="zone-name">3 號場</span><span class="zone-badge" id="cnt-court3">0</span></div><div class="player-list" id="court3"></div></div>
+  <div class="zone" id="zone-court4"><div class="zone-header"><span class="zone-name">4 號場</span><span class="zone-badge" id="cnt-court4">0</span></div><div class="player-list" id="court4"></div></div>
+</div>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+  import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+
+  // 時鐘
+  setInterval(() => {
+    document.getElementById('clock').textContent = new Date().toLocaleTimeString('zh-TW', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  }, 1000);
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyA-n5j37dvvgvdmosJNg622XAXZp5WovW8",
+    authDomain: "havix-for-customers.firebaseapp.com",
+    projectId: "havix-for-customers",
+    databaseURL: "https://havix-for-customers-default-rtdb.firebaseio.com",
+    storageBucket: "havix-for-customers.firebasestorage.app",
+    messagingSenderId: "876660373844",
+    appId: "1:876660373844:web:fb1358967daf203589b0c1"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getDatabase(app);
+  const status = document.getElementById('status');
+
+  // 監聽根目錄，自動判斷資料在哪裡
+  onValue(ref(db, '/'), (snapshot) => {
+    const rawData = snapshot.val();
+    if (!rawData) {
+      status.textContent = "連線成功，但資料庫內無資料。";
+      return;
+    }
+
+    // 自動判斷資料是在根目錄還是 simple_queue 節點下
+    const data = rawData.simple_queue ? rawData.simple_queue : rawData;
+    status.textContent = "最後更新：" + new Date().toLocaleTimeString();
+
+    ['court1', 'court2', 'court3', 'court4'].forEach(id => {
+      const container = document.getElementById(id);
+      const badge = document.getElementById('cnt-' + id);
+      if (!container) return;
+
+      container.innerHTML = '';
+      const list = data[id] || [];
+      const players = Array.isArray(list) ? list : Object.values(list); // 避免格式非陣列報錯
+      
+      players.slice(0, 4).forEach(p => {
+        if (!p.n) return;
+        const div = document.createElement('div');
+        div.className = `player ${p.g === 'M' ? 'male' : 'female'}`;
+        div.textContent = p.n;
+        container.appendChild(div);
+      });
+      
+      if (badge) badge.textContent = players.length;
+    });
+  }, (err) => {
+    status.textContent = "資料讀取失敗：" + err.message;
+  });
+
+  document.body.onclick = () => {
+    if (!document.fullscreenElement) document.documentElement.requestFullscreen();
+  };
+</script>
+</body>
+</html>

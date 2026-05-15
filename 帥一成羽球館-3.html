@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>帥一成羽球館</title>
+    <style>
+        :root {
+            --bg: #f4f7f9; --accent: #4a90e2; --male: #d1e3ff; --female: #ffd1dc;
+            --border-radius: 10px; --dark: #333;
+        }
+        body { font-family: 'Microsoft JhengHei', sans-serif; background: var(--bg); margin: 0; padding: 10px; display: flex; flex-direction: column; height: 100vh; box-sizing: border-box; }
+        h1 { text-align: center; color: var(--dark); font-size: 1.2rem; margin: 5px 0 10px 0; }
+        .controls { display: flex; justify-content: center; gap: 5px; margin-bottom: 10px; }
+        input, select, button { padding: 8px; border-radius: 8px; border: 1px solid #ccc; font-size: 14px; }
+        button { background: var(--accent); color: white; border: none; cursor: pointer; font-weight: bold; }
+        .main-container { display: grid; grid-template-columns: 100px 1fr; gap: 8px; flex-grow: 1; overflow: hidden; }
+        .area { background: white; border-radius: var(--border-radius); border: 2px solid #dfe6ed; display: flex; flex-direction: column; padding: 6px; }
+        .area h3 { margin: 0 0 5px 0; font-size: 13px; text-align: center; color: #777; border-bottom: 1px solid #eee; }
+        .player-zone { flex-grow: 1; min-height: 40px; display: flex; flex-direction: column; gap: 4px; }
+        .player { height: 36px; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-weight: bold; cursor: grab; user-select: none; font-size: 14px; margin-bottom: 2px; }
+        .player.male { background: var(--male); color: #2c5282; }
+        .player.female { background: var(--female); color: #702459; }
+        .grid-layout { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 8px; }
+        .end-btn { margin-top: 5px; background: #666; font-size: 13px; padding: 6px; width: 100%; color: white; border: none; border-radius: 4px; cursor: pointer; }
+    </style>
+</head>
+<body>
+
+<h1>帥一成羽球館🏸</h1>
+<div class="controls">
+    <input type="text" id="playerName" placeholder="姓名" style="width: 70px;">
+    <select id="playerGender"><option value="M">男</option><option value="F">女</option></select>
+    <button onclick="addPlayer()">新增</button>
+    <button onclick="toggleDeleteMode()" id="delBtn" style="background:#ff4d4f">🗑️ 刪除</button>
+</div>
+
+<div class="main-container">
+    <!-- 休息區 -->
+    <div class="area">
+        <h3>休息區</h3>
+        <div id="bench" class="player-zone"></div>
+    </div>
+
+    <div class="right-side" style="display: flex; flex-direction: column; overflow-y: auto;">
+        <!-- 三面球場 -->
+        <div class="grid-layout">
+            <div class="area"><h3>1 號場</h3><div id="court1" class="player-zone"></div><button class="end-btn" onclick="clearCourt('court1')">結束</button></div>
+            <div class="area"><h3>2 號場</h3><div id="court2" class="player-zone"></div><button class="end-btn" onclick="clearCourt('court2')">結束</button></div>
+            <div class="area"><h3>3 號場</h3><div id="court3" class="player-zone"></div><button class="end-btn" onclick="clearCourt('court3')">結束</button></div>
+        </div>
+        <!-- 三個等待區 -->
+        <div class="grid-layout">
+            <div class="area"><h3>等待 A</h3><div id="waitA" class="player-zone"></div></div>
+            <div class="area"><h3>等待 B</h3><div id="waitB" class="player-zone"></div></div>
+            <div class="area"><h3>等待 C</h3><div id="waitC" class="player-zone"></div></div>
+        </div>
+    </div>
+</div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+    import Sortable from "https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/+esm";
+
+    const firebaseConfig = { 
+        apiKey: "AIzaSyA-n5j37dvvgvdmosJNg622XAXZp5WovW8",
+        authDomain: "havix-for-customers.firebaseapp.com",
+        projectId: "havix-for-customers",
+        databaseURL: "https://havix-for-customers-default-rtdb.firebaseio.com",
+        storageBucket: "havix-for-customers.firebasestorage.app",
+        messagingSenderId: "876660373844",
+        appId: "1:876660373844:web:fb1358967daf203589b0c1"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+    const zones = ['bench', 'court1', 'court2', 'court3', 'waitA', 'waitB', 'waitC'];
+    let isLocalMoving = false;
+    let isDeleteMode = false;
+
+    onValue(ref(db, 'simple_queue'), (snap) => {
+        if (isLocalMoving) return;
+        const data = snap.val() || {};
+        zones.forEach(id => {
+            const el = document.getElementById(id); el.innerHTML = '';
+            (data[id] || []).forEach(p => {
+                const div = document.createElement('div');
+                div.className = `player ${p.g === 'M' ? 'male' : 'female'}`;
+                div.textContent = p.n; div.dataset.n = p.n; div.dataset.g = p.g;
+                div.onclick = () => { if(isDeleteMode) { div.remove(); sync(); } };
+                el.appendChild(div);
+            });
+        });
+    });
+
+    zones.forEach(id => {
+        Sortable.create(document.getElementById(id), {
+            group: 'players', animation: 150,
+            onStart: () => { isLocalMoving = true; },
+            onMove: (evt) => { 
+                if (evt.to.id !== 'bench' && evt.to.children.length >= 4) return false; 
+            },
+            onEnd: () => { isLocalMoving = false; sync(); }
+        });
+    });
+
+    function sync() {
+        const updates = {};
+        zones.forEach(id => {
+            updates[id] = [...document.getElementById(id).querySelectorAll('.player')].map(p => ({ n: p.dataset.n, g: p.dataset.g }));
+        });
+        set(ref(db, 'simple_queue'), updates);
+    }
+
+    window.addPlayer = function() {
+        const name = document.getElementById('playerName').value.trim();
+        if (!name) return;
+        const gender = document.getElementById('playerGender').value;
+        const div = document.createElement('div');
+        div.className = `player ${gender === 'M' ? 'male' : 'female'}`;
+        div.dataset.n = name; div.dataset.g = gender; div.textContent = name;
+        document.getElementById('bench').appendChild(div);
+        document.getElementById('playerName').value = '';
+        sync();
+    };
+
+    window.toggleDeleteMode = function() {
+        isDeleteMode = !isDeleteMode;
+        document.getElementById('delBtn').textContent = isDeleteMode ? "🛑 停止" : "🗑️ 刪除";
+    };
+
+    window.clearCourt = function(courtId) {
+        const court = document.getElementById(courtId);
+        const bench = document.getElementById('bench');
+        const wA = document.getElementById('waitA');
+        const wB = document.getElementById('waitB');
+        const wC = document.getElementById('waitC');
+
+        // 1. 下場回休息區
+        while (court.firstChild) { bench.appendChild(court.firstChild); }
+        
+        // 2. 等待 A 上場
+        const currentWaitA = Array.from(wA.children);
+        for (let i = 0; i < currentWaitA.length && i < 4; i++) {
+            court.appendChild(currentWaitA[i]);
+        }
+
+        // 3. 流動：B 補 A，C 補 B
+        while (wA.children.length < 4 && wB.children.length > 0) {
+            wA.appendChild(wB.children[0]);
+        }
+        while (wB.children.length < 4 && wC.children.length > 0) {
+            wB.appendChild(wC.children[0]);
+        }
+        sync();
+    };
+</script>
+</body>
+</html>

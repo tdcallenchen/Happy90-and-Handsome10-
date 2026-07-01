@@ -1,0 +1,745 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>快樂九成帥一成</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:#FFFFFF; --bg-sub:#F1F4F8; --ink:#1A1A1A; --ink-soft:#767676;
+  --line:#C7CDD3; --court:#1B7A4D; --court-deep:#125C39;
+  --male:#1C6FB0; --male-soft:#E2EEFA; --female:#B0265A; --female-soft:#FAE5ED;
+  --winner:#E0A100; --danger:#C23B3B; --radius:8px; color-scheme:light;
+}
+*,*::before,*::after{box-sizing:border-box;}
+html,body{margin:0;padding:0;background:var(--bg);font-family:'Inter','Microsoft JhengHei',sans-serif;color:var(--ink);min-height:100vh;overflow-x:hidden;}
+body{display:flex;flex-direction:column;padding:10px;}
+h1{text-align:center;margin:0 0 10px;padding:10px 0;font-family:'Oswald',sans-serif;font-weight:700;font-size:1.4rem;letter-spacing:1px;text-transform:uppercase;color:var(--ink);border-bottom:3px solid var(--court);cursor:pointer;user-select:none;}
+#controls{display:flex;justify-content:center;gap:8px;flex-wrap:wrap;margin-bottom:10px;}
+#adminControls{display:none;justify-content:center;gap:8px;flex-wrap:wrap;margin-bottom:10px;padding:10px;background:var(--bg-sub);border-radius:var(--radius);border:1.5px solid var(--line);}
+button,input,select{padding:7px 16px;border-radius:20px;border:1.5px solid var(--line);font-size:13px;font-family:'Inter',sans-serif;background:#fff;color:var(--ink);}
+button{background:var(--court);color:white;border-color:var(--court);font-weight:700;cursor:pointer;letter-spacing:0.3px;transition:background 0.1s,transform 0.08s;}
+button:hover{background:var(--court-deep);}
+button:active{transform:scale(0.97);}
+.btn-ghost{background:#fff;color:var(--ink);border-color:var(--line);}
+.btn-ghost:hover{background:var(--bg-sub);}
+.btn-danger{background:var(--danger);border-color:var(--danger);}
+.btn-danger:hover{background:#a32f2f;}
+.btn-warn{background:var(--winner);border-color:var(--winner);color:#3a2a00;}
+.btn-warn:hover{background:#c68e00;}
+.btn-blue{background:var(--male);border-color:var(--male);}
+.btn-blue:hover{background:#155a8f;}
+.btn-sm{font-size:11px;padding:5px 14px;border-radius:16px;}
+.container{display:grid;grid-template-columns:190px 1fr;gap:10px;flex-grow:1;}
+/* 平板直向 768-1024px */
+@media(min-width:769px) and (max-width:1024px){
+  .container{grid-template-columns:160px 1fr;}
+  .courts,.waiting{grid-template-columns:repeat(2,1fr)!important;}
+  .area h3{font-size:0.8rem;}
+}
+/* 手機 */
+@media(max-width:768px){.container{grid-template-columns:1fr;}.courts,.waiting{grid-template-columns:repeat(2,1fr)!important;}}
+.area{background:#fff;border:1.5px solid var(--line);border-radius:var(--radius);padding:8px;display:flex;flex-direction:column;border-top:3px solid var(--court);}
+.area h3{text-align:center;margin:0 0 8px;padding-bottom:6px;font-size:0.85rem;font-family:'Oswald',sans-serif;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:var(--ink);border-bottom:1.5px dashed var(--line);}
+.player-zone{flex-grow:1;display:flex;flex-direction:column;gap:5px;min-height:44px;}
+#bench-zone{display:grid;grid-template-columns:repeat(2,1fr);gap:5px;align-content:start;}
+.player{position:relative;width:100%;height:44px;border:1.5px solid var(--line);border-radius:6px;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:grab;user-select:none;font-weight:600;font-size:13px;transition:transform 0.08s;background:#fff;}
+.player:active{cursor:grabbing;transform:scale(0.96);}
+.player.male{background:var(--male-soft);border-left:3px solid var(--male);}
+.player.female{background:var(--female-soft);border-left:3px solid var(--female);}
+.player.winner{background:var(--court)!important;color:white!important;border-color:var(--court-deep)!important;}
+.win-rate{font-size:10px;opacity:0.75;font-weight:500;font-family:'JetBrains Mono',monospace;}
+.lv-badge{position:absolute;top:-6px;right:-6px;width:18px;height:18px;background:var(--ink);color:white;font-size:9px;font-weight:700;font-family:'JetBrains Mono',monospace;border-radius:4px;display:flex;align-items:center;justify-content:center;border:1.5px solid white;}
+.ghost{width:100%;height:44px;border-radius:6px;border:1.5px dashed var(--line);opacity:0.5;}
+.right-side{display:flex;flex-direction:column;gap:10px;}
+.courts,.waiting{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;}
+.end-btn{width:100%;margin-top:6px;padding:5px;font-size:11px;background:var(--ink);border-color:var(--ink);border-radius:12px;font-weight:700;letter-spacing:0.3px;}
+.end-btn:hover{background:#333;}
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:1000;align-items:center;justify-content:center;}
+.modal-overlay.open{display:flex;}
+.modal{background:white;border-radius:12px;padding:22px;width:95%;max-width:480px;max-height:85vh;overflow-y:auto;border-top:4px solid var(--court);box-shadow:0 8px 30px rgba(0,0,0,0.25);}
+.modal h3{margin:0 0 16px;font-family:'Oswald',sans-serif;text-transform:uppercase;letter-spacing:0.5px;}
+.modal input,.modal select,.modal textarea{width:100%;margin:5px 0;display:block;}
+.modal textarea{resize:vertical;min-height:80px;font-size:13px;padding:8px;}
+.modal-actions{display:flex;gap:8px;margin-top:14px;}
+.modal-actions button{flex:1;}
+.modal-close{width:100%;margin-top:8px;}
+.roster-item{display:flex;justify-content:space-between;align-items:center;padding:9px 4px;border-bottom:1px solid var(--line);gap:8px;}
+.roster-item .info{font-size:13px;font-family:'JetBrains Mono',monospace;}
+.card-section-title{background:var(--court);color:white;padding:6px 10px;border-radius:6px;font-weight:600;margin:10px 0 6px;font-family:'Oswald',sans-serif;text-transform:uppercase;font-size:0.85rem;}
+.match-row{font-size:12px;padding:6px 0;border-bottom:1px solid var(--line);}
+.rank-table{width:100%;border-collapse:collapse;margin-top:4px;}
+.rank-table th{background:var(--bg-sub);font-size:11px;color:var(--ink-soft);padding:5px;border-bottom:2px solid var(--line);text-transform:uppercase;}
+.rank-table td{padding:8px 4px;border-bottom:1px solid var(--line);font-size:13px;text-align:center;font-family:'JetBrains Mono',monospace;}
+.rank-table td b{font-family:'Inter',sans-serif;}
+</style>
+</head>
+<body>
+
+<h1 id="mainTitle">🏸 快樂九成帥一成</h1>
+<div id="controls">
+  <button onclick="openNewPlayerModal()">🆕 新朋友</button>
+  <button onclick="openRosterModal()">👤 老朋友</button>
+  <button onclick="toggleDeleteMode()" id="delBtn" class="btn-ghost">🗑️ 刪除模式</button>
+</div>
+<div id="adminControls">
+  <button onclick="showRank()" class="btn-blue">🥇 排行榜</button>
+  <button onclick="showLog()" class="btn-blue">📋 今日紀錄</button>
+  <button onclick="exportCSV()" class="btn-ghost">🗒️ 匯出報表</button>
+  <button onclick="clearField()" class="btn-warn">🌀 重置今日</button>
+  <button onclick="nukeDB()" class="btn-danger">💀 重置歷史</button>
+</div>
+
+<div class="container">
+  <div class="area"><h3>💺 休息區</h3><div class="player-zone" id="bench-zone"></div></div>
+  <div class="right-side">
+    <div class="courts">
+      <div class="area"><h3>🏸 一號場</h3><div class="player-zone" id="court1-zone"></div><button class="end-btn" onclick="endMatch('court1')">結束</button></div>
+      <div class="area"><h3>🏸 二號場</h3><div class="player-zone" id="court2-zone"></div><button class="end-btn" onclick="endMatch('court2')">結束</button></div>
+      <div class="area"><h3>🏸 三號場</h3><div class="player-zone" id="court3-zone"></div><button class="end-btn" onclick="endMatch('court3')">結束</button></div>
+      <div class="area"><h3>🏸 四號場</h3><div class="player-zone" id="court4-zone"></div><button class="end-btn" onclick="endMatch('court4')">結束</button></div>
+    </div>
+    <div class="waiting">
+      <div class="area"><h3>⏱ 等待一</h3><div class="player-zone" id="waitingA-zone"></div></div>
+      <div class="area"><h3>⏱ 等待二</h3><div class="player-zone" id="waitingB-zone"></div></div>
+      <div class="area"><h3>⏱ 等待三</h3><div class="player-zone" id="waitingC-zone"></div></div>
+      <div class="area"><h3>⏱ 等待四</h3><div class="player-zone" id="waitingD-zone"></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- 新朋友 -->
+<div id="newPlayerOverlay" class="modal-overlay">
+  <div class="modal">
+    <h3>🆕 新朋友</h3>
+    <input type="text" id="np-name" placeholder="姓名 *必填">
+    <select id="np-gender"><option value="M">男</option><option value="F">女</option></select>
+    <input type="number" id="np-level" placeholder="實力分級 1-18（台灣標準，預設 5）" min="1" max="18">
+    <input type="text" id="np-birthday" placeholder="生日 MMDD（選填，例如 0520）" maxlength="4" inputmode="numeric">
+    <input type="number" id="np-height" placeholder="身高 cm（選填）">
+    <input type="number" id="np-weight" placeholder="體重 kg（選填）">
+    <div class="modal-actions">
+      <button onclick="confirmNewPlayer()">加入休息區</button>
+      <button onclick="closeModal('newPlayerOverlay')" class="btn-ghost">取消</button>
+    </div>
+  </div>
+</div>
+
+<!-- 老朋友 -->
+<div id="rosterOverlay" class="modal-overlay">
+  <div class="modal">
+    <h3>👤 老朋友</h3>
+    <input type="text" id="roster-search" placeholder="搜尋姓名..." oninput="renderRoster()">
+    <div id="roster-list" style="margin-top:8px;max-height:50vh;overflow-y:auto;"></div>
+    <button onclick="closeModal('rosterOverlay')" class="btn-ghost modal-close">關閉</button>
+  </div>
+</div>
+
+<!-- 球員卡 -->
+<div id="cardOverlay" class="modal-overlay">
+  <div class="modal" style="max-width:520px;">
+    <div id="card-content"></div>
+    <button onclick="closeModal('cardOverlay')" class="btn-ghost modal-close">關閉</button>
+  </div>
+</div>
+
+<!-- 排行榜 -->
+<div id="rankOverlay" class="modal-overlay">
+  <div class="modal" style="max-width:520px;">
+    <h3>🥇 排行榜</h3>
+    <div id="rank-content"></div>
+    <button onclick="closeModal('rankOverlay')" class="btn-ghost modal-close">關閉</button>
+  </div>
+</div>
+
+<!-- 今日紀錄 -->
+<div id="logOverlay" class="modal-overlay">
+  <div class="modal">
+    <h3>📋 今日對戰紀錄</h3>
+    <div id="log-content" style="max-height:55vh;overflow-y:auto;"></div>
+    <button onclick="closeModal('logOverlay')" class="btn-ghost modal-close">關閉</button>
+  </div>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getDatabase, ref, onValue, push, remove, update, set } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+import Sortable from "https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/+esm";
+
+const firebaseConfig = { apiKey:"AIzaSyCLUmagiUpLd0qRUQ-TyoFt7hwrNK7xVDY", databaseURL:"https://havix-b6fe2-default-rtdb.firebaseio.com" };
+const db = getDatabase(initializeApp(firebaseConfig));
+
+const ADMIN_PW = "60540391";
+const ZONES = ['bench-zone','court1-zone','court2-zone','court3-zone','court4-zone','waitingA-zone','waitingB-zone','waitingC-zone','waitingD-zone'];
+const WAIT_ZONES = ['waitingA-zone','waitingB-zone','waitingC-zone','waitingD-zone'];
+const GHOST_MIN = 6;
+
+const BODY_ZONES = [
+  {id:'backhand', label:'反手',   desc:'反手區域弱，高壓、平抽反應差'},
+  {id:'forehand', label:'正手',   desc:'正手控球不穩，殺球力量不足'},
+  {id:'smash',    label:'殺球',   desc:'扣殺力量、角度、時機不佳'},
+  {id:'defense',  label:'防守',   desc:'接殺球反應慢、防守站位差'},
+  {id:'grip',     label:'握拍',   desc:'握拍方式錯誤，影響出力角度'},
+  {id:'footwork', label:'步伐',   desc:'移位速度慢、重心轉換不穩'},
+  {id:'clear',    label:'高遠球', desc:'高遠球深度不夠，難以壓制對手'},
+  {id:'drop',     label:'吊球',   desc:'吊球角度、輕重控制有問題'},
+  {id:'drive',    label:'平抽球', desc:'平行線抽球速度或方向不準'},
+  {id:'net',      label:'網前',   desc:'放小球、挑球、網前反應慢'},
+  {id:'lift',     label:'挑球',   desc:'挑球深度不夠，易被壓制'},
+  {id:'service',  label:'發球',   desc:'發球出界或過網太高，被搶攻'},
+  {id:'return',   label:'接發球', desc:'接發球位置或回擊品質有問題'},
+  {id:'stamina',  label:'體力',   desc:'後段體力下滑，動作變形走樣'},
+  {id:'judgment', label:'判斷',   desc:'場上判斷失誤，戰術應變不足'},
+];
+const FIGURE_IDS = ['backhand','forehand','smash','defense','grip','footwork'];
+const TAG_ZONES = BODY_ZONES.filter(z => !FIGURE_IDS.includes(z.id));
+
+let players = {}, historyStats = {}, logs = [], sessionStart = Date.now(), isMoving = false, isDeleteMode = false;
+
+// ── Utils ──
+const genId = () => 'p_' + (crypto.randomUUID ? crypto.randomUUID().slice(0,8) : Date.now().toString(36)+Math.random().toString(36).slice(2,6));
+const getDateKey = () => new Date().toISOString().slice(0,10);
+function getWeekKey(d=new Date()) {
+  const t=new Date(d); t.setHours(0,0,0,0);
+  t.setDate(t.getDate()+3-((t.getDay()+6)%7));
+  const y=new Date(t.getFullYear(),0,1);
+  return `${t.getFullYear()}-W${String(Math.ceil(((t-y)/86400000+1)/7)).padStart(2,'0')}`;
+}
+const nameOf = id => players[id]?.name || '?';
+const escH = s => String(s).replace(/[<>&"]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c]));
+function getTodayStats() {
+  const res={};
+  logs.filter(l=>(l.ts||0)>=sessionStart).forEach(l=>{
+    [...(l.winners||[]),...(l.losers||[])].forEach(id=>{if(!res[id])res[id]={wins:0,total:0};res[id].total++;});
+    (l.winners||[]).forEach(id=>{if(!res[id])res[id]={wins:0,total:0};res[id].wins++;});
+  });
+  return res;
+}
+
+// ── Firebase ──
+onValue(ref(db,'/'), snap=>{
+  if(isMoving) return;
+  const data=snap.val()||{};
+  players=data.players||{}; historyStats=data.history_stats||{};
+  if(data.session_start) sessionStart=data.session_start;
+  logs=data.match_logs ? Object.entries(data.match_logs).map(([k,v])=>({id:k,...v})).sort((a,b)=>b.id.localeCompare(a.id)) : [];
+  ZONES.forEach(zid=>{
+    const el=document.getElementById(zid); if(!el) return;
+    el.innerHTML='';
+    (data[zid]?.players||[]).forEach(pid=>{ if(players[pid]) el.appendChild(makeChip(pid)); });
+  });
+  padGhosts();
+});
+
+// ── Sortable ──
+ZONES.forEach(zid=>{
+  const el=document.getElementById(zid); if(!el) return;
+  Sortable.create(el,{
+    group:'players', animation:150, filter:'.ghost',
+    onStart:()=>{isMoving=true;},
+    onMove:evt=>{ if(evt.to.id!=='bench-zone' && evt.to.querySelectorAll('.player').length>=4) return false; },
+    onEnd:()=>{isMoving=false; syncZones();}
+  });
+});
+
+function syncZones() {
+  const up={};
+  ZONES.forEach(zid=>{ up[zid]={players:[...document.getElementById(zid).querySelectorAll('.player')].map(p=>p.dataset.id)}; });
+  update(ref(db,'/'),up);
+}
+
+function padGhosts() {
+  const b=document.getElementById('bench-zone'); if(!b) return;
+  b.querySelectorAll('.ghost').forEach(g=>g.remove());
+  const real=b.querySelectorAll('.player').length;
+  const need=Math.max(GHOST_MIN,Math.ceil(real/2)*2)-real;
+  for(let i=0;i<need;i++){const d=document.createElement('div');d.className='ghost';b.appendChild(d);}
+}
+
+// ── Player chip ──
+function makeChip(id) {
+  const p=players[id];
+  const div=document.createElement('div');
+  div.className=`player ${p.gender==='F'?'female':'male'}`;
+  div.dataset.id=id;
+  const s=getTodayStats()[id]||{wins:0,total:0};
+  const rate=s.total?Math.round(s.wins/s.total*100)+'%':'0%';
+  div.innerHTML=`<span>${escH(p.name)}</span><span class="win-rate">${rate}</span><span class="lv-badge">${Math.round(p.level??5)}</span>`;
+  div.addEventListener('click',()=>{
+    if(isDeleteMode){ if(confirm(`${p.name} 先去旁邊休息？（資料保留喔）`)){div.remove();padGhosts();syncZones();} return; }
+    if(div.parentElement?.id?.includes('court')){
+      const w=div.parentElement.querySelectorAll('.player.winner');
+      if(w.length>=2 && !div.classList.contains('winner')) return;
+      div.classList.toggle('winner');
+    }
+  });
+  let pt;
+  const sp=()=>{pt=setTimeout(()=>openCard(id),500);};
+  const ep=()=>clearTimeout(pt);
+  div.addEventListener('mousedown',sp); div.addEventListener('mouseup',ep); div.addEventListener('mouseleave',ep);
+  div.addEventListener('touchstart',sp,{passive:true}); div.addEventListener('touchend',ep);
+  return div;
+}
+
+// ── End match ──
+window.endMatch=function(courtId){
+  const zone=document.getElementById(courtId+'-zone');
+  const all=[...zone.querySelectorAll('.player')];
+  const ws=all.filter(p=>p.classList.contains('winner'));
+  if(ws.length!==2){alert('請選擇 2 位贏家');return;}
+  const winIds=ws.map(p=>p.dataset.id);
+  const loseIds=all.filter(p=>!winIds.includes(p.dataset.id)).map(p=>p.dataset.id);
+
+  const lvOf=id=>(players[id]&&typeof players[id].level==='number')?players[id].level:5;
+  const wAvg=winIds.reduce((s,id)=>s+lvOf(id),0)/winIds.length;
+  const lAvg=loseIds.reduce((s,id)=>s+lvOf(id),0)/loseIds.length;
+  const upset=lAvg-wAvg;
+  const gain=+(0.3+Math.max(0,upset)*0.15).toFixed(2);
+  const drop=+(0.3+Math.max(0,-upset)*0.15).toFixed(2);
+  const newLvl={};
+  winIds.forEach(id=>{newLvl[id]=Math.max(1,Math.min(18,+(lvOf(id)+gain).toFixed(2)));});
+  loseIds.forEach(id=>{newLvl[id]=Math.max(1,Math.min(18,+(lvOf(id)-drop).toFixed(2)));});
+
+  all.forEach(p=>{
+    const id=p.dataset.id;
+    if(!historyStats[id]) historyStats[id]={wins:0,total:0};
+    historyStats[id].total++;
+    if(winIds.includes(id)) historyStats[id].wins++;
+    if(players[id]) players[id].level=newLvl[id]??players[id].level;
+    p.classList.remove('winner');
+    document.getElementById('bench-zone').appendChild(p);
+  });
+  padGhosts();
+
+  let target=zone;
+  WAIT_ZONES.forEach(wid=>{
+    const src=document.getElementById(wid);
+    while(target.querySelectorAll('.player').length<4 && src.querySelector('.player')) target.appendChild(src.querySelector('.player'));
+    target=src;
+  });
+
+  const logRef=push(ref(db,'match_logs'));
+  const up={};
+  up[`match_logs/${logRef.key}`]={time:new Date().toLocaleTimeString('zh-TW',{hour12:false,hour:'2-digit',minute:'2-digit'}),date:getDateKey(),weekKey:getWeekKey(),ts:Date.now(),winners:winIds,losers:loseIds};
+  up['history_stats']=historyStats;
+  winIds.forEach(id=>{up[`players/${id}/level`]=newLvl[id];});
+  loseIds.forEach(id=>{up[`players/${id}/level`]=newLvl[id];});
+  ZONES.forEach(zid=>{up[zid]={players:[...document.getElementById(zid).querySelectorAll('.player')].map(p=>p.dataset.id)};});
+  update(ref(db,'/'),up);
+};
+
+// ── 新朋友 ──
+window.openNewPlayerModal=()=>{
+  ['np-name','np-birthday','np-height','np-weight','np-level'].forEach(i=>document.getElementById(i).value='');
+  openModal('newPlayerOverlay');
+  setTimeout(()=>document.getElementById('np-name').focus(),100);
+};
+window.confirmNewPlayer=()=>{
+  const name=document.getElementById('np-name').value.trim();
+  if(!name){alert('請輸入姓名');return;}
+  const id=genId();
+  players[id]={name, gender:document.getElementById('np-gender').value,
+    level:Number(document.getElementById('np-level').value)||5,
+    birthday:document.getElementById('np-birthday').value.trim(),
+    height:Number(document.getElementById('np-height').value)||null,
+    weight:Number(document.getElementById('np-weight').value)||null,
+    joinDate:getDateKey(), weakness:''};
+  document.getElementById('bench-zone').appendChild(makeChip(id));
+  padGhosts();
+  const up={}; up[`players/${id}`]=players[id];
+  ZONES.forEach(zid=>{up[zid]={players:[...document.getElementById(zid).querySelectorAll('.player')].map(p=>p.dataset.id)};});
+  update(ref(db,'/'),up);
+  closeModal('newPlayerOverlay');
+};
+
+// ── 老朋友 ──
+window.openRosterModal=()=>{
+  document.getElementById('roster-search').value='';
+  renderRoster(); openModal('rosterOverlay');
+};
+window.renderRoster=()=>{
+  const kw=document.getElementById('roster-search').value.trim();
+  const onField=new Set(ZONES.flatMap(zid=>[...document.getElementById(zid).querySelectorAll('.player')].map(p=>p.dataset.id)));
+  const list=Object.entries(players).filter(([id,p])=>!onField.has(id)&&p.name.includes(kw)).sort((a,b)=>a[1].name.localeCompare(b[1].name));
+  if(!list.length){
+    document.getElementById('roster-list').innerHTML=kw
+      ?`<p style="text-align:center;color:var(--ink-soft);margin:10px 0;">找不到「${escH(kw)}」<br><button style="margin-top:8px;" onclick="prefillNewPlayer('${escH(kw)}')">🐣 建立「${escH(kw)}」</button></p>`
+      :`<p style="text-align:center;color:var(--ink-soft);">名單庫是空的，先去「🆕 新朋友」建立！</p>`;
+    return;
+  }
+  document.getElementById('roster-list').innerHTML=list.map(([id,p])=>{
+    const s=historyStats[id]||{wins:0,total:0};
+    const rate=s.total?Math.round(s.wins/s.total*100)+'%':'0%';
+    return `<div class="roster-item"><span class="info">${escH(p.name)}（${p.gender==='F'?'女':'男'}）Lv.${typeof p.level==='number'?p.level.toFixed(1):'?'} · ${rate}</span><button class="btn-sm" onclick="pullPlayer('${id}')">加入 ✦</button></div>`;
+  }).join('');
+};
+window.prefillNewPlayer=name=>{closeModal('rosterOverlay');openModal('newPlayerOverlay');document.getElementById('np-name').value=name;document.getElementById('np-name').focus();};
+window.pullPlayer=id=>{document.getElementById('bench-zone').appendChild(makeChip(id));padGhosts();syncZones();renderRoster();};
+
+// ── 球員卡 ──
+function makeBodyFigure(active, editable, pid) {
+  const zFill=id=>active.has(id)?'#FDDEDE':'#F1F4F8';
+  const zStr=id=>active.has(id)?'#C23B3B':'#C7CDD3';
+  const zTxt=id=>active.has(id)?'#C23B3B':'#767676';
+  const clk=zid=>editable?'onclick="wToggle(\''+pid+'\',\''+zid+'\',this)"':'';
+  const cur=editable?'cursor:pointer;':'';
+  const g=(zid,x,y,w,h,rx,label,sub)=>
+    '<g class="wz" style="'+cur+'" '+clk(zid)+'>' +
+    '<rect x="'+x+'" y="'+y+'" width="'+w+'" height="'+h+'" rx="'+rx+'" fill="'+zFill(zid)+'" stroke="'+zStr(zid)+'" stroke-width="2"/>' +
+    '<text x="'+(x+w/2)+'" y="'+(y+h/2-6)+'" text-anchor="middle" dominant-baseline="middle" font-size="13" font-weight="700" fill="'+zTxt(zid)+'" font-family="Inter,sans-serif">'+label+'</text>'+
+    '<text x="'+(x+w/2)+'" y="'+(y+h/2+9)+'" text-anchor="middle" dominant-baseline="middle" font-size="9" fill="'+zTxt(zid)+'" font-family="Inter,sans-serif" opacity="0.65">'+sub+'</text>'+
+    '</g>';
+  let s='<svg viewBox="0 0 220 310" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:200px;display:block;margin:8px auto;">';
+  s+='<circle cx="110" cy="34" r="26" fill="#E8EDF2" stroke="#C7CDD3" stroke-width="1.5"/>';
+  s+='<circle cx="110" cy="34" r="18" fill="#D4DCE6" stroke="none"/>';
+  s+=g('backhand', 12,78,58,82,12,'反手','BACKHAND');
+  s+=g('forehand',150,78,58,82,12,'正手','FOREHAND');
+  s+=g('smash',   74,62,72,55, 8,'殺球','SMASH');
+  s+=g('defense', 74,122,72,48,8,'防守','DEFENSE');
+  s+=g('grip',    74,175,72,38,8,'握拍','GRIP');
+  s+=g('footwork',74,218,72,72,10,'步伐','FOOTWORK');
+  s+='</svg>';
+  return s;
+}
+function makeTagRow(active, editable, pid) {
+  return TAG_ZONES.map(z=>{
+    const on=active.has(z.id);
+    const bg=on?'#FDDEDE':'#F1F4F8', bc=on?'#C23B3B':'#C7CDD3', col=on?'#C23B3B':'#767676';
+    const clk=editable?'onclick="wToggle(\''+pid+'\',\''+z.id+'\',this)"':'';
+    return '<span class="wtag" data-zone="'+z.id+'" title="'+z.desc+'" style="background:'+bg+';border-color:'+bc+';color:'+col+';cursor:'+(editable?'pointer':'default')+';display:inline-block;padding:5px 10px;border-radius:20px;border:1.5px solid;font-size:12px;font-weight:600;margin:3px;transition:all 0.1s;" '+clk+'>'+z.label+'</span>';
+  }).join('');
+}
+
+window.openCard=function(id){
+  const p=players[id]; if(!p) return;
+  const h=historyStats[id]||{wins:0,total:0};
+  const rate=h.total?Math.round(h.wins/h.total*100):0;
+
+  const weekMap={};
+  logs.forEach(l=>{
+    if(!(l.winners||[]).includes(id)&&!(l.losers||[]).includes(id)) return;
+    const wk=l.weekKey||'?';
+    if(!weekMap[wk]) weekMap[wk]={wins:0,total:0};
+    weekMap[wk].total++;
+    if((l.winners||[]).includes(id)) weekMap[wk].wins++;
+  });
+  const weekRows=Object.entries(weekMap).sort((a,b)=>b[0].localeCompare(a[0])).slice(0,8)
+    .map(([wk,s])=>`<tr><td>${wk}</td><td>${s.wins}/${s.total}</td><td>${Math.round(s.wins/s.total*100)}%</td></tr>`)
+    .join('')||'<tr><td colspan="3" style="color:var(--ink-soft);">尚無紀錄</td></tr>';
+
+  const recent=logs.filter(l=>(l.winners||[]).includes(id)||(l.losers||[]).includes(id)).slice(0,5);
+  const recentHTML=recent.map(l=>{
+    const won=(l.winners||[]).includes(id);
+    const allies=(won?l.winners:l.losers).filter(x=>x!==id).map(nameOf).join('、')||'-';
+    const foes=(won?l.losers:l.winners).map(nameOf).join('、')||'-';
+    return `<div class="match-row"><span style="color:${won?'var(--court)':'var(--danger)'};font-weight:700;">${won?'勝':'負'}</span> [${l.time||'?'}] 隊友：${allies} ｜ 對手：${foes}</div>`;
+  }).join('')||'<p style="color:var(--ink-soft);font-size:13px;">尚無對戰紀錄</p>';
+
+  const wd=(()=>{const w=p.weakness;if(!w)return{zones:[],tags:[],note:''};if(typeof w==='string')return{zones:[],tags:[],note:w};return{zones:w.zones||[],tags:w.tags||[],note:w.note||''};})();
+  const active=new Set([...wd.zones,...wd.tags]);
+
+  let html='<div style="text-align:center;margin-bottom:12px;">';
+  html+='<div style="font-size:1.4rem;font-weight:800;font-family:Oswald,sans-serif;">'+escH(p.name)+'</div>';
+  html+='<div style="font-size:12px;color:var(--ink-soft);margin-top:4px;">';
+  html+=(p.gender==='F'?'女':'男')+' ｜ Lv.'+(typeof p.level==='number'?p.level.toFixed(1):'-');
+  if(p.birthday) html+=' ｜ 生日 '+escH(p.birthday);
+  if(p.height) html+=' ｜ '+p.height+'cm';
+  if(p.weight) html+=' / '+p.weight+'kg';
+  html+='</div>';
+  html+='<button class="btn-sm btn-ghost" style="margin-top:6px;" onclick="openCardEdit(\''+id+'\')">✏️ 編輯基本資料</button>';
+  html+='<div id="card-edit-area"></div></div>';
+  html+='<div class="card-section-title">🥇 生涯戰績</div>';
+  html+='<div style="text-align:center;padding:6px;font-size:14px;">勝 <b>'+h.wins+'</b> / 負 <b>'+(h.total-h.wins)+'</b> ｜ 勝率 <b>'+rate+'%</b></div>';
+  html+='<div class="card-section-title">🪶 近期週戰績</div>';
+  html+='<table class="rank-table"><tr><th>週次</th><th>勝/場</th><th>勝率</th></tr>'+weekRows+'</table>';
+  html+='<div class="card-section-title">🏸 最近對戰</div>'+recentHTML;
+  html+='<div class="card-section-title">🎯 弱點分析</div>';
+  html+='<div id="weakness-figure">'+makeBodyFigure(active,false,id)+'</div>';
+  html+='<div id="weakness-tags" style="text-align:center;padding:4px 0;">'+makeTagRow(active,false,id)+'</div>';
+  if(wd.note) html+='<div style="font-size:12px;color:var(--ink-soft);padding:8px;background:var(--bg-sub);border-radius:6px;margin-top:6px;white-space:pre-wrap;">'+escH(wd.note)+'</div>';
+  html+='<button class="btn-sm btn-ghost" style="width:100%;margin-top:8px;" onclick="openWeaknessEdit(\''+id+'\')">✏️ 編輯弱點</button>';
+  html+='<div id="weakness-note-area"></div>';
+  html+='<div class="card-section-title">🎬 影片分析</div>';
+  html+='<div id="video-analysis-area"><button class="btn-sm btn-ghost" style="width:100%;" onclick="openVideoAnalysis(\''+id+'\')">上傳影片分析技術</button></div>';
+  html+='<div style="height:8px;"></div>';
+  html+='<button class="btn-sm btn-danger" style="width:100%;" onclick="deletePlayer(\''+id+'\')">🗑️ 移除球員</button>';
+  document.getElementById('card-content').innerHTML=html;
+
+  window._wHelpers={makeBodyFigure,makeTagRow,active,id};
+  openModal('cardOverlay');
+};
+
+// ── 弱點 toggle ──
+window.wToggle=function(id,zoneId,el){
+  const p=players[id]; if(!p) return;
+  const w=typeof p.weakness==='object'&&p.weakness
+    ?{...p.weakness,zones:[...(p.weakness.zones||[])],tags:[...(p.weakness.tags||[])]}
+    :{zones:[],tags:[],note:typeof p.weakness==='string'?p.weakness:''};
+  const arr=FIGURE_IDS.includes(zoneId)?w.zones:w.tags;
+  const idx=arr.indexOf(zoneId);
+  if(idx>=0) arr.splice(idx,1); else arr.push(zoneId);
+  players[id].weakness=w;
+  const on=idx<0;
+  const shape=el.querySelector('rect,circle,ellipse');
+  el.querySelectorAll('text').forEach(t=>t.setAttribute('fill',on?'#C23B3B':'#767676'));
+  if(shape){shape.setAttribute('fill',on?'#FDDEDE':'#F1F4F8');shape.setAttribute('stroke',on?'#C23B3B':'#C7CDD3');}
+  if(el.classList.contains('wtag')){el.style.background=on?'#FDDEDE':'#F1F4F8';el.style.borderColor=on?'#C23B3B':'#C7CDD3';el.style.color=on?'#C23B3B':'#767676';}
+  update(ref(db,'/'),{['players/'+id+'/weakness']:w});
+};
+
+window.openWeaknessEdit=function(id){
+  const pw=prompt('密碼：');
+  if(pw!==ADMIN_PW){if(pw!==null)alert('密碼錯誤');return;}
+  const p=players[id]; if(!p) return;
+  const w=typeof p.weakness==='object'&&p.weakness?p.weakness:{zones:[],tags:[],note:typeof p.weakness==='string'?p.weakness:''};
+  const active=new Set([...(w.zones||[]),...(w.tags||[])]);
+  const h=window._wHelpers;
+  document.getElementById('weakness-figure').innerHTML=h.makeBodyFigure(active,true,id);
+  document.getElementById('weakness-tags').innerHTML=h.makeTagRow(active,true,id);
+  const noteVal=(w.note||'').replace(/[<>&]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]));
+  document.getElementById('weakness-note-area').innerHTML=
+    '<textarea id="wn-ta" rows="2" placeholder="補充文字（選填）..." style="width:100%;margin-top:8px;font-size:12px;padding:6px;border-radius:6px;border:1.5px solid var(--line);font-family:Inter,sans-serif;">'+noteVal+'</textarea>'+
+    '<div style="display:flex;gap:6px;margin-top:4px;">'+
+    '<button style="flex:1;font-size:12px;" onclick="saveWeaknessNote(\''+id+'\')">儲存</button>'+
+    '<button class="btn-ghost" style="flex:1;font-size:12px;" onclick="openCard(\''+id+'\')">完成</button>'+
+    '</div>';
+};
+window.saveWeaknessNote=function(id){
+  const note=document.getElementById('wn-ta').value.trim();
+  const w=typeof players[id].weakness==='object'&&players[id].weakness?{...players[id].weakness,note}:{zones:[],tags:[],note};
+  players[id].weakness=w;
+  update(ref(db,'/'),{['players/'+id+'/weakness']:w}).then(()=>openCard(id));
+};
+
+// ── 球員卡：編輯基本資料 ──
+window.openCardEdit=function(id){
+  const p=players[id]; if(!p) return;
+  const pw=prompt('密碼：');
+  if(pw!==ADMIN_PW){if(pw!==null)alert('密碼錯誤');return;}
+  document.getElementById('card-edit-area').innerHTML=`
+    <div style="border:1.5px solid var(--line);border-radius:6px;padding:10px;margin-top:8px;">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
+        <div><label style="font-size:10px;color:var(--ink-soft);">姓名</label><input id="ce-name" value="${escH(p.name)}" style="width:100%;"></div>
+        <div><label style="font-size:10px;color:var(--ink-soft);">性別</label><select id="ce-gender" style="width:100%;"><option value="M" ${p.gender!=='F'?'selected':''}>男</option><option value="F" ${p.gender==='F'?'selected':''}>女</option></select></div>
+        <div><label style="font-size:10px;color:var(--ink-soft);">等級 (1-18)</label><input id="ce-level" type="number" min="1" max="18" value="${Math.round(p.level??5)}" style="width:100%;"></div>
+        <div><label style="font-size:10px;color:var(--ink-soft);">生日 MMDD</label><input id="ce-birthday" value="${escH(p.birthday||'')}" maxlength="4" inputmode="numeric" style="width:100%;"></div>
+        <div><label style="font-size:10px;color:var(--ink-soft);">身高 cm</label><input id="ce-height" type="number" value="${p.height||''}" style="width:100%;"></div>
+        <div><label style="font-size:10px;color:var(--ink-soft);">體重 kg</label><input id="ce-weight" type="number" value="${p.weight||''}" style="width:100%;"></div>
+      </div>
+      <div style="display:flex;gap:6px;margin-top:8px;">
+        <button onclick="saveCardEdit('${id}')" style="flex:1;">儲存</button>
+        <button onclick="openCard('${id}')" class="btn-ghost" style="flex:1;">取消</button>
+      </div>
+    </div>`;
+};
+window.saveCardEdit=function(id){
+  const updated={...players[id],
+    name:document.getElementById('ce-name').value.trim()||players[id].name,
+    gender:document.getElementById('ce-gender').value,
+    level:Number(document.getElementById('ce-level').value)||players[id].level||5,
+    birthday:document.getElementById('ce-birthday').value.trim(),
+    height:Number(document.getElementById('ce-height').value)||null,
+    weight:Number(document.getElementById('ce-weight').value)||null};
+  players[id]=updated;
+  update(ref(db,'/'),{['players/'+id]:updated}).then(()=>openCard(id));
+};
+
+// ── 刪除球員 ──
+window.deletePlayer=function(id){
+  const pName=players[id]?.name||id;
+  const pw=prompt(`永久刪除「${pName}」？請輸入密碼：`);
+  if(pw!==ADMIN_PW){if(pw!==null)alert('密碼錯誤');return;}
+  const up={};
+  up['players/'+id]=null; up['history_stats/'+id]=null;
+  ZONES.forEach(zid=>{
+    const cur=[...document.getElementById(zid).querySelectorAll('.player')].map(p=>p.dataset.id).filter(x=>x!==id);
+    up[zid]={players:cur};
+  });
+  update(ref(db,'/'),up);
+  closeModal('cardOverlay');
+};
+
+// ── 影片技術分析 ──
+window.openVideoAnalysis=function(pid){
+  const area=document.getElementById('video-analysis-area');
+  area.innerHTML=
+    '<label style="font-size:12px;color:var(--ink-soft);display:block;margin-bottom:6px;">選取影片（不會上傳到任何伺服器）</label>'+
+    '<input type="file" id="vf-input" accept="video/*" style="width:100%;margin-bottom:8px;">'+
+    '<button class="btn-sm" style="width:100%;" onclick="startFrameExtract(\''+pid+'\')">下一步：抽取畫面</button>'+
+    '<button class="btn-sm btn-ghost" style="width:100%;margin-top:4px;" onclick="resetVideoArea(\''+pid+'\')">取消</button>';
+};
+window.resetVideoArea=function(pid){
+  document.getElementById('video-analysis-area').innerHTML=
+    '<button class="btn-sm btn-ghost" style="width:100%;" onclick="openVideoAnalysis(\''+pid+'\')">上傳影片分析技術</button>';
+};
+window.startFrameExtract=function(pid){
+  const input=document.getElementById('vf-input');
+  if(!input||!input.files[0]){alert('請先選取影片');return;}
+  const area=document.getElementById('video-analysis-area');
+  area.innerHTML='<p style="font-size:12px;color:var(--ink-soft);text-align:center;padding:12px;">抽取畫面中，請稍候...</p>';
+  const video=document.createElement('video');
+  video.muted=true; video.src=URL.createObjectURL(input.files[0]); video.preload='auto';
+  video.addEventListener('loadedmetadata',()=>{
+    const dur=video.duration;
+    const canvas=document.createElement('canvas'); canvas.width=480; canvas.height=270;
+    const ctx=canvas.getContext('2d');
+    const cnt=Math.min(6,Math.max(1,Math.floor(dur)));
+    const times=Array.from({length:cnt},(_,i)=>(i+0.5)*(dur/cnt));
+    const frames=[];
+    function next(){
+      if(frames.length>=times.length){URL.revokeObjectURL(video.src);showFramesAndAsk(pid,frames);return;}
+      video.currentTime=times[frames.length];
+    }
+    const handler=()=>{ctx.drawImage(video,0,0,480,270);frames.push(canvas.toDataURL('image/jpeg',0.7).split(',')[1]);next();};
+    video.addEventListener('seeked',handler);
+    next();
+  });
+  video.load();
+};
+function showFramesAndAsk(pid,frames){
+  const pName=players[pid]?.name||'這位球員';
+  const area=document.getElementById('video-analysis-area');
+  area.innerHTML=
+    '<div style="border:1.5px solid var(--line);border-radius:8px;overflow:hidden;margin-bottom:8px;"><img src="data:image/jpeg;base64,'+frames[0]+'" style="width:100%;display:block;"></div>'+
+    '<p style="font-size:12px;color:var(--ink-soft);margin:4px 0 8px;">共 '+frames.length+' 張畫面。</p>'+
+    '<label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px;">「'+escH(pName)+'」在影片中的位置或特徵：</label>'+
+    '<input id="vf-who" type="text" placeholder="例如：左邊的人、穿藍色上衣、靠近網子的..." style="width:100%;margin-bottom:8px;">'+
+    '<label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px;">重點分析（選填）：</label>'+
+    '<input id="vf-focus" type="text" placeholder="例如：反手、步伐、殺球..." style="width:100%;margin-bottom:8px;">'+
+    '<button style="width:100%;" onclick="runVideoAnalysis(\''+pid+'\')">開始分析</button>'+
+    '<button class="btn-ghost" style="width:100%;margin-top:4px;" onclick="resetVideoArea(\''+pid+'\')">取消</button>';
+  window._vFrames=frames;
+}
+window.runVideoAnalysis=async function(pid){
+  const who=document.getElementById('vf-who')?.value.trim();
+  const focus=document.getElementById('vf-focus')?.value.trim();
+  const frames=window._vFrames;
+  if(!who){alert('請描述你在影片中的位置或特徵');return;}
+  if(!frames||!frames.length){alert('找不到畫面資料，請重新選取影片');return;}
+  const area=document.getElementById('video-analysis-area');
+  area.innerHTML='<p style="font-size:13px;text-align:center;padding:16px;">🔍 分析中，請稍候...</p>';
+  const pName=players[pid]?.name||'這位球員';
+  const promptText='這是一段羽球比賽影片的連續截圖（共'+frames.length+'張，按時間順序排列）。'+
+    '我要分析的球員是「'+pName+'」，他在影片中的特徵是：「'+who+'」。'+
+    (focus?'請重點分析他的「'+focus+'」技術。':'')+
+    '請根據這些畫面分析這位球員的技術問題，包含握拍方式、步伐移動、揮拍動作、場上站位。以條列式輸出，重點放在可改進的弱點，繁體中文，語氣直接不需前言。';
+  const content=[{type:'text',text:promptText}];
+  frames.forEach(b64=>content.push({type:'image',source:{type:'base64',media_type:'image/jpeg',data:b64}}));
+  try{
+    const resp=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:1000,messages:[{role:'user',content}]})
+    });
+    const data=await resp.json();
+    if(data.error) throw new Error(data.error.message||'API 錯誤');
+    const result=(data.content||[]).filter(b=>b.type==='text').map(b=>b.text).join('\n');
+    area.innerHTML=
+      '<div class="card-section-title" style="margin-top:0;">分析結果</div>'+
+      '<div id="vf-result" style="font-size:13px;line-height:1.7;white-space:pre-wrap;background:var(--bg-sub);padding:10px;border-radius:6px;margin-bottom:8px;">'+escH(result)+'</div>'+
+      '<button style="width:100%;font-size:12px;" onclick="saveAnalysisToNote(\''+pid+'\')">💾 存進弱點</button>'+
+      '<button class="btn-ghost" style="width:100%;margin-top:4px;font-size:12px;" onclick="resetVideoArea(\''+pid+'\')">關閉</button>';
+    window._vResult=result;
+  }catch(e){
+    area.innerHTML='<p style="color:var(--danger);font-size:13px;">分析失敗：'+escH(e.message)+'</p>'+
+      '<button class="btn-ghost" style="width:100%;" onclick="resetVideoArea(\''+pid+'\')">關閉</button>';
+  }
+  window._vFrames=null;
+};
+window.saveAnalysisToNote=function(pid){
+  const result=window._vResult; if(!result) return;
+  const p=players[pid]; if(!p) return;
+  const ex=typeof p.weakness==='object'&&p.weakness?p.weakness:{zones:[],tags:[],note:''};
+  const updated={...ex,note:(ex.note?ex.note+'\n\n---\n':'')+'【影片分析】\n'+result};
+  players[pid].weakness=updated;
+  update(ref(db,'/'),{['players/'+pid+'/weakness']:updated}).then(()=>{alert('已存入弱點備注！');openCard(pid);});
+};
+
+// ── 移除模式 ──
+window.toggleDeleteMode=()=>{
+  isDeleteMode=!isDeleteMode;
+  document.getElementById('delBtn').textContent=isDeleteMode?'🛑 停止':'🗑️ 刪除模式';
+};
+
+// ── 管理選單 ──
+let clickCount=0,clickTimer;
+document.getElementById('mainTitle').addEventListener('click',()=>{
+  clickCount++; clearTimeout(clickTimer);
+  clickTimer=setTimeout(()=>{clickCount=0;},800);
+  if(clickCount>=3){
+    clickCount=0;
+    const admin=document.getElementById('adminControls');
+    if(admin.style.display==='flex'){admin.style.display='none';return;}
+    if(prompt('管理密碼：')===ADMIN_PW) admin.style.display='flex';
+    else alert('密碼錯誤');
+  }
+});
+
+// ── 排行榜 ──
+window.showRank=()=>{
+  const all=Object.entries(historyStats).map(([id,s])=>{
+    const p=players[id];
+    return{id,name:p?.name||'(已刪除)',gender:p?.gender||'M',wins:s.wins||0,total:s.total||0,rate:s.total?Math.round((s.wins||0)/s.total*100):0};
+  });
+  const medal=i=>['🥇','🥈','🥉'][i]||(i+1);
+  const makeTable=(list,title)=>{
+    const sorted=[...list].sort((a,b)=>b.wins-a.wins||b.rate-a.rate);
+    return '<div class="card-section-title">'+title+'</div>'+
+      '<table class="rank-table"><tr><th>#</th><th style="text-align:left;">姓名</th><th>勝(場)</th><th>勝率</th></tr>'+
+      sorted.map((p,i)=>`<tr><td>${medal(i)}</td><td style="text-align:left;"><b style="cursor:pointer;text-decoration:underline;" onclick="closeModal('rankOverlay');openCard('${p.id}')">${escH(p.name)}</b></td><td>${p.wins}(${p.total})</td><td>${p.rate}%</td></tr>`).join('')+
+      '</table>';
+  };
+  document.getElementById('rank-content').innerHTML=
+    '<p style="font-size:12px;color:var(--ink-soft);text-align:center;">點姓名查看對戰紀錄</p>'+
+    makeTable(all.filter(p=>p.gender==='M'),'🏸 男子榜')+
+    makeTable(all.filter(p=>p.gender==='F'),'🪶 女子榜');
+  openModal('rankOverlay');
+};
+
+// ── 今日紀錄 ──
+window.showLog=()=>{
+  const tl=logs.filter(l=>(l.ts||0)>=sessionStart);
+  document.getElementById('log-content').innerHTML=tl.map(l=>
+    `<div style="padding:10px;border-bottom:1px solid var(--line);font-size:13px;"><b>[${l.time||'?'}]</b><br><span style="color:var(--court);">勝：${(l.winners||[]).map(nameOf).join('、')}</span><br><span style="color:var(--danger);">敗：${(l.losers||[]).map(nameOf).join('、')}</span></div>`
+  ).join('')||'<p style="text-align:center;color:var(--ink-soft);">今天還沒打球，快揪人來打 🏸</p>';
+  openModal('logOverlay');
+};
+
+// ── 匯出 CSV ──
+window.exportCSV=()=>{
+  const csv='\uFEFF時間,贏家,輸家\n'+logs.filter(l=>(l.ts||0)>=sessionStart).map(l=>`${l.time||''},"${(l.winners||[]).map(nameOf).join('、')}","${(l.losers||[]).map(nameOf).join('、')}"`).join('\n');
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));
+  a.download=`戰報_${getDateKey()}.csv`; a.click();
+};
+
+// ── 清空場地（把場上所有人送回休息區，等待區也清掉） ──
+window.clearField=async()=>{
+  if(!confirm('確定重置今日？')) return;
+  const up={session_start: Date.now()};
+  ZONES.forEach(zid=>{ up[zid]={players:[]}; });
+  await update(ref(db,'/'),up);
+};
+
+// ── 重置全部 ──
+window.nukeDB=async()=>{
+  if(prompt('重置全部？請輸入密碼：')!==ADMIN_PW){alert('密碼錯誤');return;}
+  if(!confirm('確定清空所有資料？')) return;
+  try {
+    await set(ref(db,'/'), null);
+    location.reload();
+  } catch(e) {
+    alert('清除失敗：'+e.message);
+  }
+};
+
+// ── Modal helpers ──
+function openModal(id){document.getElementById(id).classList.add('open');}
+function closeModal(id){document.getElementById(id).classList.remove('open');}
+window.closeModal=closeModal;
+document.querySelectorAll('.modal-overlay').forEach(ov=>ov.addEventListener('click',e=>{if(e.target===ov)ov.classList.remove('open');}));
+</script>
+</body>
+</html>

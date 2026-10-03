@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>帥一成羽球館｜大螢幕</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@500;700;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0f172a; --card: #14532d; --card-border: #34d399;
+    --male-bg: #dbeafe; --male-text: #1d4ed8;
+    --female-bg: #ffe4ef; --female-text: #be185d;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body {
+    font-family: 'Noto Sans TC', sans-serif;
+    background: var(--bg); color: #fff;
+    display: flex; flex-direction: column;
+    padding: 1.5vh 0.8vw; gap: 1.5vh; overflow: hidden;
+  }
+  h1 { font-size: min(7vw, 3.2vh); font-weight: 900; text-align: center; flex-shrink: 0; }
+  .courts {
+    flex: 1; min-height: 0;
+    display: grid; grid-template-columns: repeat(4, 1fr);
+    grid-template-rows: 1fr; gap: 1.2vw;
+  }
+  .court {
+    background: var(--card); border: 0.4vh solid var(--card-border);
+    border-radius: 2vh; padding: 1.5vh 0.8vw;
+    display: flex; flex-direction: column; align-items: stretch; gap: 1.5vh; min-height: 0; min-width: 0;
+  }
+  .court-title {
+    font-size: 4.2vw; font-weight: 900; color: #a7f3d0;
+    display: flex; align-items: center; justify-content: center;
+    text-align: center; line-height: 1.2; flex-shrink: 0;
+  }
+  .players {
+    flex: 1; min-height: 0;
+    display: grid; grid-template-columns: 1fr;
+    grid-template-rows: repeat(4, 1fr); gap: 1.2vh;
+  }
+  .p {
+    border-radius: 1.2vh; font-size: 3.8vw; font-weight: 900;
+    display: flex; align-items: center; justify-content: center;
+    overflow: hidden; white-space: nowrap;
+  }
+  .p.M { background: var(--male-bg); color: var(--male-text); }
+  .p.F { background: var(--female-bg); color: var(--female-text); }
+  .p.empty { background: rgba(255,255,255,0.06); }
+  .idle { grid-column: 1 / -1; grid-row: 1 / -1; display:flex; align-items:center; justify-content:center;
+          font-size: 3.8vw; color: #6ee7b7; opacity: .6; }
+</style>
+</head>
+<body>
+<h1>🏸 場上球員</h1>
+<div class="courts" id="courts"></div>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+  import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+
+  const app = initializeApp({
+    apiKey: "AIzaSyA-n5j37dvvgvdmosJNg622XAXZp5WovW8",
+    authDomain: "havix-for-customers.firebaseapp.com",
+    projectId: "havix-for-customers",
+    databaseURL: "https://havix-for-customers-default-rtdb.firebaseio.com",
+    storageBucket: "havix-for-customers.firebasestorage.app",
+    messagingSenderId: "876660373844",
+    appId: "1:876660373844:web:fb1358967daf203589b0c1"
+  });
+  const db = getDatabase(app);
+
+  const courtIds = ['court1', 'court2', 'court3', 'court4'];
+  const root = document.getElementById('courts');
+
+  // 先建立 4 個場地外框，之後只更新球員
+  courtIds.forEach((id, i) => {
+    root.insertAdjacentHTML('beforeend',
+      `<div class="court"><div class="court-title">${i + 1} 號場</div><div class="players" id="v-${id}"></div></div>`);
+  });
+
+  function esc(s) {
+    return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+
+  onValue(ref(db, 'simple_queue'), snap => {
+    const data = snap.val() || {};
+    courtIds.forEach(id => {
+      const list = data[id] || []; // Firebase 不會存空陣列，沒人時為 undefined
+      const box = document.getElementById('v-' + id);
+      if (list.length === 0) {
+        box.innerHTML = '<div class="idle">空場</div>';
+        return;
+      }
+      let html = '';
+      for (let i = 0; i < 4; i++) {
+        const p = list[i];
+        html += p
+          ? `<div class="p ${p.g === 'M' ? 'M' : 'F'}">${esc(p.n)}</div>`
+          : `<div class="p empty"></div>`;
+      }
+      box.innerHTML = html;
+    });
+  });
+</script>
+</body>
+</html>
